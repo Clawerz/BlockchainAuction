@@ -15,4 +15,23 @@ public class Bid {
     private Date date;
     private double value;
     private int clientID;
+
+    public Bid(Date date, double value, int clientID) {
+        this.date = new Date();
+        this.value = value;
+        this.clientID = clientID;
+    }
+    
+    public Date getDate() {
+        return date;
+    }
+
+    public double getValue() {
+        return value;
+    }
+
+    public int getClientID() {
+        return clientID;
+    }
+    
 }
