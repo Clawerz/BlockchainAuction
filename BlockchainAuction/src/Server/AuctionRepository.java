@@ -22,11 +22,11 @@ public class AuctionRepository {
    
     public static void main(String[] args) throws SocketException, IOException {
         
-         DatagramSocket serverSocket = new DatagramSocket(9876);
-         boolean bye=false;
-      //int c=5;
-      while(true) //instead of c i want to use true
-        {
+      DatagramSocket serverSocket = new DatagramSocket(9876);
+         
+      while(true){
+            
+          //Receber informação por udp
           byte[] receivebuffer = new byte[1024];
           byte[] sendbuffer  = new byte[1024];
           DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
@@ -35,24 +35,23 @@ public class AuctionRepository {
           int portno = recvdpkt.getPort();
           String clientdata = new String(recvdpkt.getData());
           System.out.println("\nClient : "+ clientdata);
+          
+          //Mandar informação por udp, para a mesma pessoa que nos enviou
           System.out.print("\nServer : ");
           BufferedReader serverRead = new BufferedReader(new InputStreamReader (System.in) );
           String serverdata = serverRead.readLine();
-          
           sendbuffer = serverdata.getBytes();
           DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, IP,portno);
           serverSocket.send(sendPacket); 
-          //here the check condition for serverdata which must be bye
+          
+          //Terminar
           if(serverdata.equalsIgnoreCase("bye"))
           {
               System.out.println("connection ended by server");
               break;
-          }
-          
-          
+          }         
       }
         serverSocket.close();
-    }
-            
-    }
+    }      
+}
 
