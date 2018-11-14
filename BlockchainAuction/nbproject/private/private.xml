@@ -5,7 +5,8 @@
         <group>
             <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Server/AuctionManager.java</file>
             <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Client/Client.java</file>
-            <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Message/Message.java</file>
+            <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Auction/Bid.java</file>
+            <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/blockchainauction/BlockchainAuction.java</file>
             <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Auction/Auction.java</file>
             <file>file:/C:/Users/Filipe/Desktop/UA/S/Projecto/BlockchainAuction/BlockchainAuction/src/Server/AuctionRepository.java</file>
         </group>
