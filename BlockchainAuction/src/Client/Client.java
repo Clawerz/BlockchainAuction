@@ -33,7 +33,10 @@ public class Client {
             byte[] receivebuffer = new byte[1024];
 
             System.out.print("\nClient: ");
+            
+            //Mensagem a mandar
             String clientData = clientRead.readLine();
+            
             sendbuffer = clientData.getBytes();        
             DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, IP, 9877);
             clientSocket.send(sendPacket);

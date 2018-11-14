@@ -5,6 +5,9 @@
  */
 package Message;
 
+import Auction.Auction;
+import java.lang.String;
+
 /**
  *
  * @author Filipe
@@ -30,5 +33,13 @@ public class Message {
        // Position 1 -> port
        String [] destination = new String[1];
        return "";
+    }
+    
+    public Auction createAuction(String input){
+        String[] div = input.split(" ");
+        
+        //auctionName,creatorID,auctionID,timeToFinish
+        Auction a = new Auction(div[0],Integer.parseInt(div[1]),Integer.parseInt(div[2]),Integer.parseInt(div[3]));
+        return a;
     }
 }

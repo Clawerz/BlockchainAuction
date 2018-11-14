@@ -29,6 +29,14 @@ public class Auction {
         this.auctionFinished = auctionFinished;
         this.buyerID = buyerID;
     }
+    
+    public Auction(String auctionName, int creatorID, int auctionID, int timeToFinish) {
+        this.auctionName = auctionName;
+        this.creatorID = creatorID;
+        this.auctionID = auctionID;
+        this.timeToFinish = timeToFinish;
+        auctionFinished = false;
+    }
 
     public String getAuctionName() {
         return auctionName;
@@ -38,7 +46,7 @@ public class Auction {
         return creatorID;
     }
 
-    public int getAuctionIDID() {
+    public int getAuctionID() {
         return auctionID;
     }
 
@@ -57,6 +65,15 @@ public class Auction {
     public ArrayList<Bid> getBids() {
         return bids;
     }
+
+    public void setAuctionFinished(boolean auctionFinished) {
+        this.auctionFinished = auctionFinished;
+    }
+
+    public void setBuyerID(int buyerID) {
+        this.buyerID = buyerID;
+    }
+    
     
     
     
