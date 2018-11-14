@@ -3,11 +3,13 @@
 Security project from UA 2018
 
 # Run
+
 	* **AuctionManager.java**
 	* **AuctionRepository.java**
 	* **Client.java**
 
-# Send message from Client considering the following list, put a "-" between message parameteres for example cta-param[1]-param[2]-param[3]-param[4]
+# Send message from Client 
+Consider the following list, put a "-" between message parameteres for example cta-param[1]-param[2]-param[3]-param[4]
 Please see Javadocs for messages syntax
 
 		*cta - Create Auction
