@@ -1,0 +1,182 @@
+\documentclass[pdftex,12pt,a4paper]{report}
+\usepackage[portuguese,english]{babel}
+\usepackage[T1]{fontenc} 
+\usepackage[utf8]{inputenc}
+\usepackage{pgfplots}
+\usepackage{listings}
+\usepackage{color}
+
+
+\lstset{language=SQL,%
+    %basicstyle=\color{red},
+    breaklines=true,%
+    keywordstyle=\color{blue},%
+    identifierstyle=\color{black},%
+    stringstyle=\color{RedViolet},
+    commentstyle=\color{mygreen},%
+    showstringspaces=false,%without this there will be a symbol in the places where there is a space
+    numbers=left,%
+    numberstyle={\tiny \color{black}},% size of the numbers
+    numbersep=9pt, % this defines how far the numbers are from the text
+    emph=[1]{for,end,break},emphstyle=[1]\color{red}, %some words to emphasise
+    %emph=[2]{word1,word2}, emphstyle=[2]{style},  
+}
+
+\definecolor{Black}{rgb}{0.0, 0.0, 0.0}
+\definecolor{Blue}{rgb}{0.0, 0.0, 1.0}
+\definecolor{DarkGreen}{rgb}{0.0, 0.42, 0.24}
+\definecolor{Red}{rgb}{0.89, 0.0, 0.13}
+
+\lstset{
+  breaklines=true,                                     % line wrapping on
+  language=SQL,
+  frame=ltrb,
+  framesep=5pt,
+  basicstyle=\normalsize,
+  keywordstyle=\ttfamily\color{Blue},
+  identifierstyle=\ttfamily\color{Black}\bfseries,
+  commentstyle=\color{DarkGreen},
+  stringstyle=\ttfamily\color{Red},
+  showstringspaces=ture
+}
+
+\renewcommand*\thesection{\thechapter\arabic{section}}
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+\begin{document}
+\begin{figure}[h]
+\center
+\includegraphics[height=1.5cm]{logo_UA.png}
+\end{figure}
+\begin{center}
+
+
+\textsc{\large Security 2018/2019\\[2cm]}
+
+{ \huge \bfseries Auction System \\[4cm]
+
+\textsc{\small{8240 - INTEGRATED MASTER IN COMPUTER ENGINEERING AND TELEMATICS}}\\[2cm]
+}
+\end{center}
+
+\begin{minipage}{0.4\textwidth}
+
+\begin{flushleft} \large
+Filipe Reis
+\small{\\NMec: 76414}
+\small{filipereis96@ua.pt}
+\end{flushleft}
+\end{minipage}
+\begin{minipage}{0.4\textwidth}
+
+\begin{flushright} \large
+Carlos Ribeiro
+\small{\\NMec: 76771}
+\small{carlosfiliperibeiro@ua.pt}
+\end{flushright}
+\end{minipage}\\[1cm]
+
+\vfill
+
+\begin{center}
+\textsc{\large 16 November 2018\\[2cm]}
+\end{center}
+
+
+
+
+
+%Conteúdos, dar paragrafo
+\tableofcontents
+
+%Headers
+\renewcommand{\thechapter}{}
+
+\clearpage
+
+\section{Introduction}
+
+The purposed project is called "Blockchain-based auction management". The main goal is to build an auction manager safe, to that we will implement a set of security policies, for example, protect the messages exchanged between the different entities, identify a bid author with CC, validate a receipt of each bid, etc. A auction can have different bidding types, for example, an English or blind auction. The first one is based on the current bid to be higher than the last one. The second one in bidding without knowing what the other clients do, who has bid higher wins the auction. In our solution, we are going to use an English auction style.
+
+\newpage
+\section{Requirements}
+
+The system requires:
+
+\begin{itemize}
+\item \textbf{Bids confidentiality, integrity and authentication.} Bids cannot be modified or forged.
+\item \textbf{Bid acceptance control and confirmation.} Bids are only accepted if they fulfill the English auction style. 
+\item \textbf{Bid author identity and anonymity.} Bids are linked to users by their CC, however they shall remain anonymous until the end of a auction.
+\item \textbf{Honesty assurance.} The auction repository shall have access to all the information about the bids, but shall not be able to act differently according with the client.
+\end{itemize}
+
+\vskip 2cm
+\section{System Components}
+
+The system will be based in 3 parts, which are :
+
+\begin{itemize}
+\item \textbf{Auction Manager} Server where all the information will be managed and sent to their place.
+\item \textbf{Auction Repository} Server with all the information about the auctions. 
+\item \textbf{Clients} Normal auction client that is able to do a set of instructions.
+\end{itemize}
+
+\newpage
+\section{Mechanisms}
+\vskip 1cm
+\subsection{Key Distribuition}
+In order for the client communicate with the Auction Manager, and the Manager communicate with the Auction Repository the pairs have to agree a key.\\
+
+Diffie-Hellman is the algorithm we found to do the key agreement, it creates a safe channel between two peers in such a way that the secret can't be seen by observing the communication.
+
+\vskip 1.5cm
+\subsection{Cipher}
+Our system is goign to use symetric block ciphers.\\
+
+For that we are using AES algorithm with Cipher Block Chaining (CBC) mode.
+
+\vskip 1.5cm
+\subsection{Message Authentication Codes}
+Message authentication codes(MAC) are used to provide information integrity and authenticity. A MAC is calculated with a key and the message we want to authenticate.
+
+\vskip 1.5cm
+\subsection{Signatures}
+We need to be able to ensure a message authenticity, MAC helps with it but it does not completely solves the problem, so we are also going to use signatures in order to do it.
+
+\vskip 1.5cm
+\subsection{Certificates}
+A digital certificate allows other parties to rely on signatures made about the private key that corresponds to the certified public key. This will be used to validate signatures.
+
+\vskip 3cm
+\section{Working pipeline}
+
+\vskip 1cm
+\subsection{Establish a session}
+All the messages are going to be encrypted using AES, they are also going to have an associated MAC, to that the server and the client must agree a shared key by both, this is where Diffie-Hellman algorithm enters in action by making the key agreement.
+
+\vskip 1.5cm
+\subsection{Message exchange}
+Once the session is established to send a message it must be ciphered with the key provided by Diffie-Hellman algorithm, after that it is calculated his MAC with the messaged already encrypted, we do that to save resources, and finally it is sent, once received on the server side, the MAC is validated, if it is valid than it is deciphered with the same key.
+As this system is based in a blockchain and we need to be able to order the bids, each bid will be encrypted with the last one hash.
+
+\vskip 1.5cm
+\subsection{Client}
+In order to be able to authenticate a message, signatures shall be used, as CC uses PKCS1 we are also going to use that algorithm.
+A certificate shall be exchanged between client and server so server knows he can trust client, CC uses asymmetric keys,RSA, so server shall also use it.
+
+\vskip 1.5cm
+\subsection{Receipts}
+To create a receipt, the bid shall pass by a hash function, than concatenated with a time stamp and than pass again by a hash function, after all that it is ciphred with the authentication key from CC.
+
+
+\newpage
+\section{Conclusion}
+We have found some points that we haven't understood, like how Cryptopuzzles or Certificates will work on this project.
+Although, we haven't thought properly what and how we are going to develop this project, we already have a very basic ideia and we believe we will be able to conclude this project sucessfully.
+
+
+
+
+
+
+
+\end{document}

@@ -91,23 +91,24 @@ public class AuctionRepository {
                 
                 //Devolver mensagem
                 messageManager(serverSocket,"rct");
+                break;
                 
             case "tta" : 
                 //Terminar leilão
                 param = msg.split(("-"));
                 
                 //Substituir todos os caracteres que não sejam números por nada, fazer isto por causa de ter convertido de byte para string então o caracter '\0' vai fazer parte da string.
-                param[2]=param[2].replaceAll("[^0-9]+", "");
-                param[3]=param[3].replaceAll("[^0-9]+", "");
-                param[4]=param[4].replaceAll("[^0-9]+", "");
+                param[1]=param[1].replaceAll("[^0-9]+", "");
+                System.out.println(param[1]);
                    
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar mudar o estado desse leilão
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionID()==Integer.parseInt(param[3]))  AuctionList.get(i).setAuctionFinished(true);
+                    if(AuctionList.get(i).getAuctionID()==Integer.parseInt(param[1]))  AuctionList.get(i).setAuctionFinished(true);
                  }
               
                 //Devolver mensagem
-                messageManager(serverSocket,"rgc");
+                messageManager(serverSocket,"rtt");
+                break;
                 
             case "gba" : 
                 //Listar todos os bids de um client
@@ -127,6 +128,7 @@ public class AuctionRepository {
               
                 //Devolver mensagem
                 messageManager(serverSocket,retMsg);
+                break;
                 
             case "gbc" : 
                 //Listar todos os bids de um client
@@ -146,6 +148,7 @@ public class AuctionRepository {
               
                 //Devolver mensagem
                 messageManager(serverSocket,retMsg);
+                break;
                 
             case  "lga": 
                 //Listar todos os leilões ativos
@@ -160,6 +163,7 @@ public class AuctionRepository {
               
                 //Devolver mensagem
                 messageManager(serverSocket,retMsg);
+                break;
                 
             case  "lta": 
                 //Listar todos os leilões inativos
@@ -174,6 +178,7 @@ public class AuctionRepository {
               
                 //Devolver mensagem
                 messageManager(serverSocket,retMsg);
+                break;
                 
             case  "coa":
                 //Ver resultado de um leilão
@@ -191,6 +196,7 @@ public class AuctionRepository {
               
                 //Devolver mensagem
                 messageManager(serverSocket,"rtt");
+                break;
                 
             case  "vlr":
                     //Não faz nada por agora, pois ainda não sabemos como validar recibos

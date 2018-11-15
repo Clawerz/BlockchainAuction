@@ -40,7 +40,6 @@ public class AuctionManager {
             ClientPort = recvdpkt.getPort();
             client=true;
           }
-          
           System.out.println("\nClient : "+ ReceivedMsg);
           
           //Ver tipo de mensagem
@@ -88,8 +87,9 @@ public class AuctionManager {
     public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, String msg) throws IOException{
         String type = msg.substring(0,3);
         String []param;
+        String retMsg="";
         switch(type){
-            case "cta": case "tta" : case "gba" : case "gbc" :  case  "lga": case  "coa": case  "vlr":
+            case "cta": case "tta" : case "gba" : case "gbc" :  case  "lga": case "lta": case  "coa": case  "vlr":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
                     messageRepository(serverSocket, msg);
                     break;
@@ -98,20 +98,33 @@ public class AuctionManager {
                     //Mandar mensagem ao Cliente a informar queo pretendido foi feito;
                     messageClient(ClientIP, ClientPort,serverSocket, "Operation completed with sucess!");
                     break;
-                
+                    
             case "rgb" : 
                     //Mandar mensagem ao Cliente com os bids feitos
+                    messageClient(ClientIP,ClientPort,serverSocket, msg);
                     break;
                 
             case "rgc" : 
                     //Mandar mensagem ao Cliente com os bids feitos
+                    messageClient(ClientIP,ClientPort,serverSocket, msg);
                     break;
                 
             case  "rlg": 
                     System.out.println(msg);
                     //Mandar mensagem ao Cliente com os auctions ativos
                     param = msg.split(("-"));
-                    String retMsg="";
+                    retMsg="";
+                    for(int i=1; i<param.length;i++){
+                        retMsg+=param[i];
+                    }
+                    messageClient(ClientIP,ClientPort,serverSocket,retMsg);
+                    break;
+           
+            case "rlt":
+                System.out.println(msg);
+                    //Mandar mensagem ao Cliente com os auctions ativos
+                    param = msg.split(("-"));
+                    retMsg="";
                     for(int i=1; i<param.length;i++){
                         retMsg+=param[i];
                     }
