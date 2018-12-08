@@ -85,9 +85,10 @@ public class AuctionManager {
      * @throws IOException 
      */
     public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, String msg) throws IOException{
-        String type = msg.substring(0,3);
-        String []param;
+        String[] param = msg.split(("-"));
+        String type = param[0];
         String retMsg="";
+
         switch(type){
             case "cta": case "tta" : case "gba" : case "gbc" :  case  "lga": case "lta": case  "coa": case  "vlr":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
@@ -95,7 +96,7 @@ public class AuctionManager {
                     break;
                 
             case "rct": case "rtt" : case  "rvl":
-                    //Mandar mensagem ao Cliente a informar queo pretendido foi feito;
+                    //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
                     messageClient(ClientIP, ClientPort,serverSocket, "Operation completed with sucess!");
                     break;
                     
@@ -133,14 +134,18 @@ public class AuctionManager {
                 
             case  "rco": 
                     //Mandar mensagem ao Cliente com os auctions inativos
-                    messageClient(ClientIP, ClientPort,serverSocket, "ERROR - Invalid message");
+                    messageClient(ClientIP, ClientPort,serverSocket, "ERROR - Invalid message(leilões inativos)");
                     break;
-                
+            
+            case "exit":
+                    messageClient(ClientIP,ClientPort,serverSocket,"Bye");
+                    break;
+                    
             case "end":
                     messageRepository(serverSocket,"end");
                     serverSocket.close();
                     System.exit(1);
-                
+                    break;
             default:
                     messageClient(ClientIP, ClientPort,serverSocket, "ERROR - Invalid message");
                     break;

@@ -13,6 +13,7 @@ public class Auction {
     private int creatorID;
     private int auctionID;
     private int timeToFinish;
+    private boolean englishAuction;
     private boolean auctionFinished;
     private int buyerID;
     private Bid winnerBid;
@@ -24,13 +25,15 @@ public class Auction {
      * @param auctionName Nome do leilão
      * @param creatorID ID do cliente criador
      * @param auctionID ID do leilão
+     * @param englishAuction leilão inglês ou leilão cego
      * @param timeToFinish  Tempo até ao leilão terminar
      */
-    public Auction(String auctionName, int creatorID, int auctionID, int timeToFinish) {
+    public Auction(String auctionName, int creatorID, int auctionID, int timeToFinish, boolean englishAuction) {
         this.auctionName = auctionName;
         this.creatorID = creatorID;
         this.auctionID = auctionID;
         this.timeToFinish = timeToFinish;
+        this.englishAuction = englishAuction;
         auctionFinished = false;
     }
 
@@ -66,6 +69,14 @@ public class Auction {
         return timeToFinish;
     }
 
+    /**
+     * 
+     * @return Retorna se é leilão inglês ou leilão cego
+     */
+    public boolean isEnglishAuction() {
+        return englishAuction;
+    }
+    
     /**
      * 
      * @return Retorna true caso o leilão já tenha acabado, false se não

@@ -71,22 +71,29 @@ public class AuctionRepository {
      */
     
     public static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, String msg) throws IOException{
-        String type = msg.substring(0,3);
-        String []param;
+        String[] param = msg.split(("-"));
+        String type = param[0];
         String retMsg="";
         
         switch(type){
             case "cta": 
+                //leilão inglês ou leilão cego
+                boolean englishAuction=true;
+                
                 //Criar leilão
                 param = msg.split(("-"));
                 
                 //Substituir todos os caracteres que não sejam números por nada, fazer isto por causa de ter convertido de byte para string então o caracter '\0' vai fazer parte da string.
                 param[2]=param[2].replaceAll("[^0-9]+", "");
                 param[3]=param[3].replaceAll("[^0-9]+", "");
-                param[4]=param[4].replaceAll("[^0-9]+", "");;
+                param[4]=param[4].replaceAll("[^0-9]+", "");
                 
-                //String auctionName, int creatorID, int auctionID, int timeToFinish
-                Auction a = new Auction(param[1],Integer.parseInt(param[2]),Integer.parseInt(param[3]),Integer.parseInt(param[4]));
+                if(param[5].equals("blind") ){
+                    englishAuction = false;
+                }
+
+                //String auctionName, int creatorID, int auctionID, int timeToFinish, boolean englishAuction
+                Auction a = new Auction(param[1],Integer.parseInt(param[2]),Integer.parseInt(param[3]), Integer.parseInt(param[4]), englishAuction);
                 AuctionList.add(a);
                 
                 //Devolver mensagem
@@ -205,6 +212,7 @@ public class AuctionRepository {
             case "end":
                     serverSocket.close();
                     System.exit(1);
+                    break;
         }
     }
     
