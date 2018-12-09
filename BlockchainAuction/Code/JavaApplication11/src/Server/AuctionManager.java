@@ -5,6 +5,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import org.json.JSONObject;
 
 /**
  *
@@ -40,18 +41,20 @@ public class AuctionManager {
             ClientPort = recvdpkt.getPort();
             client=true;
           }
-          System.out.println("\nClient : "+ ReceivedMsg);
+          
+          JSONObject recMsg = new JSONObject(ReceivedMsg);
+          System.out.println("\nClient : " + recMsg.toString());
           
           //Ver tipo de mensagem
-          ComputeMessageType(ClientIP,ClientPort,serverSocket,ReceivedMsg);
+          ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg);
           
-          DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+          /*DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
           serverSocket.receive(receivePacket);
           String RepositoryMsg = new String(receivePacket.getData());
           System.out.print("\nRepository: " + RepositoryMsg);
           
           //Ver tipo de mensagem
-          ComputeMessageType(ClientIP,ClientPort,serverSocket,RepositoryMsg);
+          ComputeMessageType(ClientIP,ClientPort,serverSocket,RepositoryMsg);*/
       }
     }
     
@@ -84,72 +87,28 @@ public class AuctionManager {
      * @param msg Mensagem a ser interpretada
      * @throws IOException 
      */
-    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, String msg) throws IOException{
-        String[] param = msg.split(("-"));
-        String type = param[0];
+    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg) throws IOException{
+        String type = msg.getString(("Type"));
         String retMsg="";
+        JSONObject retJSON;
 
         switch(type){
-            case "cta": case "tta" : case "gba" : case "gbc" :  case  "lga": case "lta": case  "coa": case  "vlr":
+            case "cta":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
                     messageRepository(serverSocket, msg);
                     break;
                 
-            case "rct": case "rtt" : case  "rvl":
+            case "rct":
                     //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
-                    messageClient(ClientIP, ClientPort,serverSocket, "Operation completed with sucess!");
-                    break;
-                    
-            case "rgb" : 
-                    //Mandar mensagem ao Cliente com os bids feitos
-                    messageClient(ClientIP,ClientPort,serverSocket, msg);
-                    break;
-                
-            case "rgc" : 
-                    //Mandar mensagem ao Cliente com os bids feitos
-                    messageClient(ClientIP,ClientPort,serverSocket, msg);
-                    break;
-                
-            case  "rlg": 
-                    System.out.println(msg);
-                    //Mandar mensagem ao Cliente com os auctions ativos
-                    param = msg.split(("-"));
-                    retMsg="";
-                    for(int i=1; i<param.length;i++){
-                        retMsg+=param[i];
-                    }
-                    messageClient(ClientIP,ClientPort,serverSocket,retMsg);
-                    break;
-           
-            case "rlt":
-                System.out.println(msg);
-                    //Mandar mensagem ao Cliente com os auctions ativos
-                    param = msg.split(("-"));
-                    retMsg="";
-                    for(int i=1; i<param.length;i++){
-                        retMsg+=param[i];
-                    }
-                    messageClient(ClientIP,ClientPort,serverSocket,retMsg);
-                    break;
-                
-            case  "rco": 
-                    //Mandar mensagem ao Cliente com os auctions inativos
-                    messageClient(ClientIP, ClientPort,serverSocket, "ERROR - Invalid message(leilões inativos)");
-                    break;
-            
-            case "exit":
-                    messageClient(ClientIP,ClientPort,serverSocket,"Bye");
-                    break;
-                    
-            case "end":
-                    messageRepository(serverSocket,"end");
-                    serverSocket.close();
-                    System.exit(1);
+                    retMsg = "Operation completed with sucess!";
+                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
                     break;
             default:
-                    messageClient(ClientIP, ClientPort,serverSocket, "ERROR - Invalid message");
-                    break;
-            
+                    retMsg = "ERROR - Invalid message";
+                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                    break;     
         }
     }
     
@@ -161,12 +120,12 @@ public class AuctionManager {
      * @throws UnknownHostException
      * @throws IOException 
      */
-    public static void messageRepository(DatagramSocket serverSocket, String msg) throws UnknownHostException, IOException{
+    public static void messageRepository(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
         byte[] sendbuffer  = new byte[1024];
         
-        sendbuffer = msg.getBytes();        
+        sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         serverSocket.send(sendPacket);
     }
@@ -181,9 +140,9 @@ public class AuctionManager {
      * @throws UnknownHostException
      * @throws IOException 
      */
-    public static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, String msg) throws UnknownHostException, IOException{
+    public static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         byte[] sendbuffer  = new byte[1024];
-        sendbuffer = msg.getBytes();        
+        sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
     }

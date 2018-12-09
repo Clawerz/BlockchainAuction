@@ -24,7 +24,7 @@ public class Bid {
      * @param value Valor do bid
      * @param clientID ID do cliente
      */
-    public Bid(Date date, double value, int clientID) {
+    public Bid(double value, int clientID) {
         this.date = new Date();
         this.value = value;
         this.clientID = clientID;
