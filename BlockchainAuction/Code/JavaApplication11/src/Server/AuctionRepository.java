@@ -94,7 +94,7 @@ public class AuctionRepository {
                     englishAuction = false;
                 }
 
-                Auction a = new Auction(msg.getString("Name"), msg.getInt("Time"), englishAuction);
+                Auction a = new Auction(msg.getInt("clientID"), msg.getString("Name"), msg.getInt("Time"), englishAuction);
                 AuctionList.add(a);
                 
                 //Devolver mensagem
@@ -173,16 +173,18 @@ public class AuctionRepository {
                 //Listar todos os leilões ativos
                 retMsg="";
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
+                int activeAuctionTotal = 0;
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).isAuctionFinished()==false) retMsg+=AuctionList.get(i).getAuctionName();
+                    if(AuctionList.get(i).isAuctionFinished()==false){
+                        activeAuctionTotal++;
+                        String auctionName = AuctionList.get(i).getAuctionName();
+                        retMsg += ",\"Auction" + activeAuctionTotal + "\":"+auctionName;
+                    }
                  }
                 
                 //Devolver mensagem
-                if(retMsg.equals("")){
-                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Ooops! Theres no active auctions at the moment.\"}");
-                }else{
-                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\",\"Auctions\":"+retMsg+"}");
-                }
+                retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":"+activeAuctionTotal+ retMsg + "}");
+                
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
@@ -190,16 +192,17 @@ public class AuctionRepository {
                 //Listar todos os leilões inativos
                 retMsg="";
                 //Percorrer todos os leilões, os que tiverem inativos são adicionados á string
+                int inactiveAuctionTotal = 0;
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).isAuctionFinished()==true) retMsg+=AuctionList.get(i).getAuctionName();
+                    if(AuctionList.get(i).isAuctionFinished()==true){
+                        inactiveAuctionTotal++;
+                        String auctionName = AuctionList.get(i).getAuctionName();
+                        retMsg += ",\"Auction" + inactiveAuctionTotal + "\":"+auctionName;
+                    }
                  }
               
                 //Devolver mensagem
-                if(retMsg.equals("")){
-                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Ooops! Theres no inactive auctions at the moment.\"}");
-                }else{
-                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\",\"Auctions\":"+retMsg+"}");
-                }
+                retJSON = new JSONObject("{ \"Type\":\"InactiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"InactiveAuctionsTotal\":"+inactiveAuctionTotal+ retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 

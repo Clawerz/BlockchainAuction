@@ -25,11 +25,11 @@ import org.json.*;
  * 
  */
 public class Client {
-    private static int clientID=0;
+    /*private static int clientID=0;
 
     public Client(int clientID) {
         clientID++;
-    }
+    }*/
     
     
     public static void main(String[] args) throws SocketException, IOException {
@@ -41,11 +41,34 @@ public class Client {
         InetAddress IP = InetAddress.getByName("127.0.0.1");
 
         DatagramSocket clientSocket = new DatagramSocket();
+        byte[] sendbuffer = new byte[1024];
+        byte[] receivebuffer = new byte[1024];
+        String sendMsg = "";
+        JSONObject sendObj=null;
+        
+        int clientID = 0;
+            
+        //Convert to json, cuidado com a maneria como se constroio a mesnagem
+        sendMsg = "{ \"Type\":\"clientID\"}";
+        sendObj = new JSONObject(sendMsg);
+        //System.out.println(obj.getString("Type"));
+        messageManager(clientSocket,sendObj);
+                        
+        DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+            clientSocket.receive(receivePacket);
+            String serverData = new String(receivePacket.getData());
+            
+            JSONObject rec = new JSONObject(serverData);
+            for(int i=1; i < rec.names().length();i++){
+                List tmp = rec.names().toList();
+                clientID = rec.getInt("clientID");
+                System.out.print("\nO seu ID é " + clientID);
+            }
+        
         
         while(!exit)
         {
-            byte[] sendbuffer = new byte[1024];
-            byte[] receivebuffer = new byte[1024];
+            
             
             String messageType = "";
             String auctionName = "";
@@ -54,8 +77,7 @@ public class Client {
             String userID = "";
             double amount = 0;
             
-            String sendMsg = "";
-            JSONObject sendObj=null;
+            
             
             System.out.print("\n\nEscolha uma opção");
             System.out.print("\n1-Criar leilão");
@@ -93,7 +115,7 @@ public class Client {
                                 break;
                         }
                         //Convert to json, cuidado com a maneria como se constroio a mesnagem
-                        sendMsg = "{ \"Type\":"+messageType+",\"Name\":"+auctionName+ ",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
+                        sendMsg = "{ \"Type\":"+messageType+",\"clientID\":"+clientID+",\"Name\":"+auctionName+ ",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
                         sendObj = new JSONObject(sendMsg);
                         //System.out.println(obj.getString("Type"));
                         messageManager(clientSocket,sendObj);
@@ -174,14 +196,43 @@ public class Client {
                         break;
             }
 
-            DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+            receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
             clientSocket.receive(receivePacket);
-            String serverData = new String(receivePacket.getData());
+            serverData = new String(receivePacket.getData());
             
-            JSONObject rec = new JSONObject(serverData);
-            for(int i=1; i < rec.names().length();i++){
-                List tmp = rec.names().toList();
-                System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+            rec = new JSONObject(serverData);
+            String type = rec.getString(("Type"));
+            switch(type){
+                case "ret":
+                for(int i=1; i < rec.names().length();i++){
+                    List tmp = rec.names().toList();
+                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                }
+                break;
+                case "ActiveAuctions":
+                    int activeAuctionTotal = rec.getInt("ActiveAuctionsTotal");
+                    if(activeAuctionTotal == 0){
+                        System.out.print("\nNão existem leilões ativos.");
+                        }
+                    else{
+                        System.out.print("\nLeilões ativos:");
+                        for(int i=1; i<=activeAuctionTotal; i++){
+                            System.out.print("\n" + i + "-" + rec.getString("Auction" + i));
+                        }
+                    }
+                    break;
+                case "InactiveAuctions":
+                    int inactiveAuctionTotal = rec.getInt("InactiveAuctionsTotal");
+                    if(inactiveAuctionTotal == 0){
+                        System.out.print("\nNão existem leilões inativos.");
+                        }
+                    else{
+                        System.out.print("\nLeilões inativos:");
+                        for(int i=1; i<=inactiveAuctionTotal; i++){
+                            System.out.print("\n" + i + "-" + rec.getString("Auction" + i));
+                        }
+                    }
+                    break;
             }
 
         }

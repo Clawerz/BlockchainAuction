@@ -28,7 +28,8 @@ public class Auction {
      * @param englishAuction leilão inglês ou leilão cego
      * @param timeToFinish  Tempo até ao leilão terminar
      */
-    public Auction(String auctionName, int timeToFinish, boolean englishAuction) {
+    public Auction(int creatorID, String auctionName, int timeToFinish, boolean englishAuction) {
+        this.creatorID = creatorID;
         this.auctionName = auctionName;
         this.timeToFinish = timeToFinish;
         this.englishAuction = englishAuction;

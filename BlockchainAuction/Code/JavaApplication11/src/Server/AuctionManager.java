@@ -16,6 +16,11 @@ import org.json.JSONObject;
  */
 public class AuctionManager {
 
+    private static int clientID=0;
+
+    public static void newClientID() {
+         clientID++;
+    }
    
     public static void main(String[] args) throws SocketException, IOException {
         
@@ -36,7 +41,7 @@ public class AuctionManager {
           String ReceivedMsg = new String(recvdpkt.getData());
           
           //Obter endereço do client
-          if(!client){
+          if((!recvdpkt.getAddress().toString().equals("127.0.0.1")) && (recvdpkt.getPort()!=9876 )){
             ClientIP = recvdpkt.getAddress();
             ClientPort = recvdpkt.getPort();
             client=true;
@@ -93,6 +98,11 @@ public class AuctionManager {
         JSONObject retJSON;
 
         switch(type){
+            case "clientID":
+                    newClientID();
+                    retJSON = new JSONObject("{ \"Type\":\"clientID\",\"clientID\":"+clientID+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                    break;
             case "cta":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
                     messageRepository(serverSocket, msg);
