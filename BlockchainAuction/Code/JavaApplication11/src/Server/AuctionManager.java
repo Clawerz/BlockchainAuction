@@ -110,8 +110,13 @@ public class AuctionManager {
                 
             case "rct":
                     //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
-                    retMsg = "Operation completed with sucess!";
+                    retMsg = "Operation completed with success!";
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                    break;
+            case "SUCCESS":
+                    //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
+                    retJSON = new JSONObject("{ \"Type\":\"SUCCESS\"}");
                     messageClient(ClientIP, ClientPort,serverSocket, retJSON);
                     break;
             default:
