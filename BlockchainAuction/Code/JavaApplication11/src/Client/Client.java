@@ -170,7 +170,6 @@ public class Client {
                         break;
                         
                     case "2":
-                        //TODO: Mudar a mensagem recebida, para não mostrar ao utilizador a mensagem do sevidor.
                         boolean existAuctions = getActiveAuctionsByClient(clientID);
                         
                         if(existAuctions){
@@ -195,11 +194,13 @@ public class Client {
                             rec = new JSONObject(serverData);
                             String type = rec.getString(("Type"));
                             switch(type){
-                                case "ret":
-                                for(int i=1; i < rec.names().length();i++){
-                                    List tmp = rec.names().toList();
-                                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
-                                }
+                                case "SUCCESS":
+                                    if(rec.getBoolean("SUCCESS")){
+                                        System.out.print("\nLeilão terminado com sucesso.");
+                                    }
+                                    else{
+                                        System.out.print("\nERRO! Leilão não encontrado!");
+                                    }
                                 break;
                             }
                         }

@@ -129,15 +129,7 @@ public class AuctionRepository {
                     }
                  }
                 
-                
-              
-                if(found){
-                    //Devolver mensagem
-                    retMsg = "Operation completed with sucess!";
-                }else{
-                    retMsg = "ERROR! Auction not found or you are not the creator!"; 
-                }
-                retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
+                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+found+"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
