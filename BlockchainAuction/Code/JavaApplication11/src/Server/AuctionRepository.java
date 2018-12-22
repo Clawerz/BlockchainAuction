@@ -246,19 +246,23 @@ public class AuctionRepository {
             case  "coa":
                 //Ver resultado de um leilão
                 retMsg="";
+                
+                found = false;
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar obter toda a informação sobre o leilão
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")){
                         if(AuctionList.get(i).getBuyerID() != 0){
-                            retMsg+= ",\"Bought\":\"true\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID() + ",\"BuyerID\":" + AuctionList.get(i).getBuyerID() + ",\"Value\":" + AuctionList.get(i).getWinnerBid().getValue();
+                            retMsg= ",\"Bought\":\"true\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID() + ",\"BuyerID\":" + AuctionList.get(i).getBuyerID() + ",\"Value\":" + AuctionList.get(i).getWinnerBid().getValue();
                         }else{
-                            retMsg+= ",\"Bought\":\"false\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID();
+                            retMsg= ",\"Bought\":\"false\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID();
                         }
-                    }else{
-                        retMsg+= ",\"AuctionID\":0";
+                        found = true;
+                        break;
                     }
-                 }
-              
+                }
+                if(!found){
+                    retMsg= ",\"AuctionID\":0";
+                }
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"AuctionOutcome\",\"Message\":\"Operation completed with sucess!\"" + retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);

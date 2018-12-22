@@ -58,20 +58,14 @@ public class Client {
             
         //Convert to json, cuidado com a maneria como se constroio a mesnagem
         sendMsg = "{ \"Type\":\"clientID\"}";
-        sendObj = new JSONObject(sendMsg);
-        //System.out.println(obj.getString("Type"));
-        messageManager(clientSocket,sendObj);
+
+        rec = messageManager(clientSocket,sendMsg);
                         
-        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-            clientSocket.receive(receivePacket);
-            serverData = new String(receivePacket.getData());
-            
-            rec = new JSONObject(serverData);
-            for(int i=1; i < rec.names().length();i++){
-                List tmp = rec.names().toList();
-                clientID = rec.getInt("clientID");
-                System.out.print("\nO seu ID é " + clientID);
-            }
+        for(int i=1; i < rec.names().length();i++){
+            List tmp = rec.names().toList();
+            clientID = rec.getInt("clientID");
+            System.out.print("\nO seu ID é " + clientID);
+        }
         
         
         while(!exit)
@@ -149,15 +143,10 @@ public class Client {
                         }
                         //Convert to json, cuidado com a maneria como se constroio a mesnagem
                         sendMsg = "{ \"Type\":"+messageType+",\"clientID\":"+clientID+",\"Name\":\""+auctionName+ "\",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        //System.out.println(obj.getString("Type"));
-                        messageManager(clientSocket,sendObj);
                         
-                        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                        clientSocket.receive(receivePacket);
-                        serverData = new String(receivePacket.getData());
-
-                        rec = new JSONObject(serverData);
+                        //System.out.println(obj.getString("Type"));
+                        rec = messageManager(clientSocket, sendMsg);
+                        
                         type = rec.getString(("Type"));
                         switch(type){
                             case "SUCCESS":
@@ -184,14 +173,9 @@ public class Client {
                                 }
                             }
                             sendMsg = "{ \"Type\":"+messageType + ",\"ClientID\":"+clientID + ",\"AuctionID\":"+auctionID+"}";
-                            sendObj = new JSONObject(sendMsg);
-                            messageRepository(clientSocket,sendObj);
+                            
+                            rec = messageRepository(clientSocket,sendMsg);
 
-                            receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                            clientSocket.receive(receivePacket);
-                            serverData = new String(receivePacket.getData());
-
-                            rec = new JSONObject(serverData);
                             String type = rec.getString(("Type"));
                             switch(type){
                                 case "SUCCESS":
@@ -252,14 +236,9 @@ public class Client {
                             }
                             messageType = "gba";
                             sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";
-                            sendObj = new JSONObject(sendMsg);
-                            messageRepository(clientSocket,sendObj);
-                            
-                            receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                            clientSocket.receive(receivePacket);
-                            serverData = new String(receivePacket.getData());
 
-                            rec = new JSONObject(serverData);
+                            rec = messageRepository(clientSocket,sendMsg);
+
                             type = rec.getString(("Type"));
                             switch(type){
                                 case "Bids":
@@ -288,14 +267,9 @@ public class Client {
                             }
                         }
                         sendMsg = "{ \"Type\":"+messageType+ ",\"ClientID\":"+userID+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
-                        
-                        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                        clientSocket.receive(receivePacket);
-                        serverData = new String(receivePacket.getData());
 
-                        rec = new JSONObject(serverData);
+                        rec = messageRepository(clientSocket,sendMsg);
+                        
                         type = rec.getString(("Type"));
                         switch(type){
                             case "Bids":
@@ -326,13 +300,9 @@ public class Client {
                             }
                             messageType = "coa";
                             sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";                            sendObj = new JSONObject(sendMsg);
-                            messageRepository(clientSocket,sendObj);
+                            
+                            rec = messageRepository(clientSocket,sendMsg);
 
-                            receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                            clientSocket.receive(receivePacket);
-                            serverData = new String(receivePacket.getData());
-
-                            rec = new JSONObject(serverData);
                             type = rec.getString(("Type"));
                             switch(type){
                                 case "AuctionOutcome":
@@ -359,14 +329,9 @@ public class Client {
                         //TODO: Não faz nada por agora, pois ainda não sabemos como validar recibos
                         messageType = "vlr";
                         sendMsg = "{ \"Type\":"+messageType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
-                        
-                        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                        clientSocket.receive(receivePacket);
-                        serverData = new String(receivePacket.getData());
 
-                        rec = new JSONObject(serverData);
+                        rec = messageRepository(clientSocket,sendMsg);
+
                         type = rec.getString(("Type"));
                         switch(type){
                             case "ret":
@@ -403,14 +368,9 @@ public class Client {
                                 }
                             }
                             sendMsg = "{ \"Type\":"+messageType+",\"AuctionID\":"+auctionID+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
-                            sendObj = new JSONObject(sendMsg);
-                            messageRepository(clientSocket,sendObj);
 
-                            receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-                            clientSocket.receive(receivePacket);
-                            serverData = new String(receivePacket.getData());
+                            rec = messageRepository(clientSocket,sendMsg);
 
-                            rec = new JSONObject(serverData);
                             type = rec.getString(("Type"));
                             switch(type){
                                 case "ret":
@@ -432,27 +392,11 @@ public class Client {
                     case "0":
                         sendMsg = "exit";
                         exit = true;
-                        messageManager(clientSocket,sendObj);
+                        //messageManager(clientSocket,sendMsg);
                         break;
                     default:
                         System.out.print("\nERRO! Opção inválida!");
             }
-
-            /*receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-            clientSocket.receive(receivePacket);
-            serverData = new String(receivePacket.getData());
-            
-            rec = new JSONObject(serverData);
-            String type = rec.getString(("Type"));
-            switch(type){
-                case "ret":
-                for(int i=1; i < rec.names().length();i++){
-                    List tmp = rec.names().toList();
-                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
-                }
-                break;
-            }*/
-
         }
         
         clientSocket.close();
@@ -462,14 +406,9 @@ public class Client {
     private static boolean getActiveAuctionsByClient(int clientID) throws IOException{
         messageType = "lgaClient";
         sendMsg = "{ \"Type\":"+messageType+",\"ClientID\":" + clientID + "}";
-        sendObj = new JSONObject(sendMsg);
-        messageRepository(clientSocket,sendObj);
 
-        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-        clientSocket.receive(receivePacket);
-        serverData = new String(receivePacket.getData());
+        rec = messageRepository(clientSocket,sendMsg);
 
-        rec = new JSONObject(serverData);
         type = rec.getString(("Type"));
         switch(type){
             case "ActiveAuctions":
@@ -494,14 +433,9 @@ public class Client {
     private static boolean getActiveAuctions() throws IOException{
         messageType = "lga";
         sendMsg = "{ \"Type\":"+messageType+"}";
-        sendObj = new JSONObject(sendMsg);
-        messageRepository(clientSocket,sendObj);
 
-        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-        clientSocket.receive(receivePacket);
-        serverData = new String(receivePacket.getData());
+        rec = messageRepository(clientSocket,sendMsg);
 
-        rec = new JSONObject(serverData);
         type = rec.getString(("Type"));
         switch(type){
             case "ActiveAuctions":
@@ -526,14 +460,9 @@ public class Client {
     private static boolean getInactiveAuctions() throws IOException{
         messageType = "lta";
         sendMsg = "{ \"Type\":"+messageType+"}";
-        sendObj = new JSONObject(sendMsg);
-        messageRepository(clientSocket,sendObj);
 
-        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-        clientSocket.receive(receivePacket);
-        serverData = new String(receivePacket.getData());
+        rec = messageRepository(clientSocket,sendMsg);
 
-        rec = new JSONObject(serverData);
         type = rec.getString(("Type"));
         switch(type){
             case "InactiveAuctions":
@@ -563,7 +492,8 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    public static void messageManager(DatagramSocket clientSocket, JSONObject msg) throws UnknownHostException, IOException{
+    public static JSONObject messageManager(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+        sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
@@ -576,6 +506,11 @@ public class Client {
             clientSocket.close();
             System.exit(1);
         }
+        
+        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+        clientSocket.receive(receivePacket);
+        serverData = new String(receivePacket.getData());
+        return new JSONObject(serverData);
     }
     
     
@@ -587,7 +522,8 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    public static void messageRepository(DatagramSocket clientSocket, JSONObject msg) throws UnknownHostException, IOException{
+    public static JSONObject messageRepository(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+        sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
         byte[] sendbuffer  = new byte[1024];
@@ -600,5 +536,10 @@ public class Client {
             clientSocket.close();
             System.exit(1);
         }
+        
+        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+        clientSocket.receive(receivePacket);
+        serverData = new String(receivePacket.getData());
+        return new JSONObject(serverData);
     }
 }
