@@ -1,10 +1,25 @@
 package Server;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.KeyPair;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -14,11 +29,21 @@ import org.json.JSONObject;
  * Servidor "rendevouz" que age como intermediário entre os clientes e o servidor repositório
  * 
  */
-public class AuctionManager {
 
+public class AuctionManager {
+    
+    //Client Keys
+    public static ArrayList<PublicKey> clientKeys = new ArrayList<>();
    
-    public static void main(String[] args) throws SocketException, IOException {
-        
+    public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException {
+     
+     //Cria par de chaves 
+     KeyPair kp = SecurityManager.generateKey();
+     //Criar certificado
+     X509Certificate cert = SecurityManager.generateCert(kp,"CN=Auction_Manager, L=AV, C=PT", 100, "SHA1withRSA");
+     SecurityManager.printCertificateSpecs(cert);
+     
+     
      DatagramSocket serverSocket = new DatagramSocket(9877);
      
      //Informação relativa ao cliente
@@ -44,9 +69,9 @@ public class AuctionManager {
           
           JSONObject recMsg = new JSONObject(ReceivedMsg);
           System.out.println("\nClient : " + recMsg.toString());
-          
+         
           //Ver tipo de mensagem
-          ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg);
+          ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg, cert);
           
           /*DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
           serverSocket.receive(receivePacket);
@@ -87,12 +112,43 @@ public class AuctionManager {
      * @param msg Mensagem a ser interpretada
      * @throws IOException 
      */
-    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg) throws IOException{
+    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException{
         String type = msg.getString(("Type"));
         String retMsg="";
         JSONObject retJSON;
 
         switch(type){
+            case "init":
+                    //Mandar certificado 
+                    //Gson gson = new Gson();
+                    //retJSON = new JSONObject("{ \"Type\":\"initCert\",\"Certificate\":"+gson.toJson(cert)+"}");
+                    messageClientCert(ClientIP, ClientPort,serverSocket,cert);
+                    
+                    byte[] receivebuffer = new byte[32768];
+                    DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+                    serverSocket.receive(receivePacket);
+
+                    byte[] certificateBytes = receivePacket.getData();
+                    CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+                    X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
+                    System.out.println(certificate.toString());
+                    
+                    try{
+                        certificate.checkValidity();
+                        clientKeys.add(certificate.getPublicKey());
+                        retMsg = "Valid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
+                        messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                        System.out.println("Certificate valid");
+                    }catch(IOException | CertificateExpiredException | CertificateNotYetValidException | JSONException e){
+                        retMsg = "Invalid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
+                        messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                        System.out.println("Certificate invalid");
+                    }
+                    
+                    break;
+        
             case "cta":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
                     messageRepository(serverSocket, msg);
@@ -146,6 +202,14 @@ public class AuctionManager {
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
     }
-  
+    
+    public static void messageClientCert(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
+        byte[] sendbuffer  = new byte[32768];
+        sendbuffer = cert.getEncoded();
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
+        serverSocket.send(sendPacket);
+    }
+
+    
 }
 
