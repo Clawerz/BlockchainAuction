@@ -2,7 +2,9 @@ package Server;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -15,6 +17,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
+import javax.crypto.Cipher;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateSerialNumber;
@@ -32,7 +35,7 @@ public class SecurityManager {
      * @return Par de chaves gerado
      * @throws java.security.NoSuchAlgorithmException
      */ 
-    public static KeyPair generateKey() throws NoSuchAlgorithmException {
+    static KeyPair generateKey() throws NoSuchAlgorithmException {
         //Usamos RSA
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
         //Inicializar
@@ -52,7 +55,7 @@ public class SecurityManager {
      * 
      * adaptado de : https://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate/
      */ 
-    public static X509Certificate generateCert(KeyPair keyPair, String dn, int ndays, String algorithm){
+    static X509Certificate generateCert(KeyPair keyPair, String dn, int ndays, String algorithm){
 	PrivateKey privkey = keyPair.getPrivate();
 	X509CertInfo certInfo = new X509CertInfo();
         Date from = new Date();
@@ -101,7 +104,7 @@ public class SecurityManager {
     * Imprime informações sobre um certificado
      * @param cert Certificado para o qual queremos ver as informações
      */ 
-    public static void printCertificateSpecs(X509Certificate cert){
+    static void printCertificateSpecs(X509Certificate cert){
 	System.out.println("\nCertificate info:");
 	Principal p = cert.getIssuerDN();
         System.out.println("Name: " + p.getName());
@@ -112,6 +115,22 @@ public class SecurityManager {
 	System.out.println("Public key: " + cert.getPublicKey());
 	System.out.println("Certificate hashcode: " + cert.hashCode());
 	System.out.println("Certificate toString(): " + cert.toString());
+    }
+    
+    /**
+     * Encripta uma mensagem, usando chaves assimetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param key chave publica do servidor neste caso
+     * @return mensagem encriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] decryptMsg(Key key, byte[] input) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.DECRYPT_MODE, key);
+        byte[] output = cipher.doFinal(input);
+        return output;
     }
 
 }

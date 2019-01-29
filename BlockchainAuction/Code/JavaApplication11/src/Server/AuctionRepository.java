@@ -84,7 +84,7 @@ public class AuctionRepository {
      * @throws IOException 
      */
     
-    public static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort) throws IOException{
+    private static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort) throws IOException{
         String type = msg.getString(("Type"));
         String retMsg="";
         JSONObject retJSON;
@@ -98,7 +98,7 @@ public class AuctionRepository {
                     englishAuction = false;
                 }
 
-                Auction a = new Auction(msg.getInt("clientID"), msg.getString("Name"), auctionID, msg.getInt("Time"), englishAuction);
+                Auction a = new Auction(msg.getInt("ClientID"), msg.getString("Name"), auctionID, msg.getInt("Time"), englishAuction);
                 AuctionList.add(a);
                 
                 //Devolver mensagem
@@ -112,7 +112,7 @@ public class AuctionRepository {
                 double value = 0;
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar mudar o estado desse leilão
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")) {
+                    if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName"))) {
                         if(AuctionList.get(i).getCreatorID() == msg.getInt("ClientID")){
                             for(int j=0; j<AuctionList.get(i).getBids().size();j++){
                                 if(AuctionList.get(i).getBids().get(j).getValue()>value){
@@ -129,7 +129,7 @@ public class AuctionRepository {
                     }
                  }
                 
-                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+found+"}");
+                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
@@ -192,12 +192,13 @@ public class AuctionRepository {
                         activeAuctionTotal++;
                         String auctionName = AuctionList.get(i).getAuctionName();
                         int auctionID = AuctionList.get(i).getAuctionID();
-                        retMsg += ",\"AuctionName" + activeAuctionTotal + "\":\"" + auctionName + "\",\"AuctionID" + activeAuctionTotal + "\":" + auctionID + "";
+                        retMsg += "\"AuctionName\":" + auctionName + ",\"AuctionID\":" + auctionID;
                     }
                  }
                 
-                //Devolver mensagem
-                retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotal + retMsg + "}");
+                //Devolver mensagem7
+                System.out.println(retMsg);
+                retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" /*+ activeAuctionTotal +*/+ retMsg + "}");
                 
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
@@ -303,7 +304,7 @@ public class AuctionRepository {
      * @throws UnknownHostException
      * @throws IOException
      */
-    public static void messageManager(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static void messageManager(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
@@ -323,7 +324,7 @@ public class AuctionRepository {
      * @throws UnknownHostException
      * @throws IOException 
      */
-    public static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         byte[] sendbuffer  = new byte[1024];
         sendbuffer = msg.toString().getBytes();        
         System.out.println(ClientPort);

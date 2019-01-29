@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -36,7 +37,7 @@ import javax.crypto.Cipher;
 
 public class SecurityClient {
     
-    public static KeyStore ks;
+    private static KeyStore ks;
     /**
      * Configurações iniciais para o uso do cartão de cidadão.
      * 
@@ -46,11 +47,10 @@ public class SecurityClient {
      * @throws java.security.NoSuchAlgorithmException 
      * @throws java.security.cert.CertificateException 
      */
-    public static void init() throws KeyStoreException, IOException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException{
+    static void init() throws KeyStoreException, IOException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException{
         Provider p = Security.getProvider("SunPKCS11");
         p = p.configure("CitizenCard.cfg");
         Security.addProvider( p );
-        
         ks = KeyStore.getInstance("PKCS11", "SunPKCS11-PTeID" );
         ks.load( null, null );
         
@@ -68,9 +68,19 @@ public class SecurityClient {
      * @return Certificado de autenticação do CC
      * @throws java.security.KeyStoreException
      */
-    public static X509Certificate getCCCertificate() throws KeyStoreException{
+    static X509Certificate getCCCertificate() throws KeyStoreException{
         X509Certificate cert = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
         return cert;
+    }
+    
+    /**
+     * Devolve chave private de autenticação do cliente
+     * 
+     * @return chave private de autenticação do cliente
+     * @throws java.security.KeyStoreException
+     */
+    static PrivateKey getPrivateKey() throws KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException{
+        return (PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null);
     }
      
     /**
@@ -84,16 +94,16 @@ public class SecurityClient {
      * @throws java.security.UnrecoverableKeyException
 
      */
-    public static byte[] sign(byte[] dataBuffer) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
+    static byte[] sign(byte[] dataBuffer) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
        //Fazer assinatura de um objecto
        Signature s = Signature.getInstance("SHA256withRSA");
        //Os ALIAS podem ser o CITIZEN AUTHENTICATION CERTIFICATE ou CITIZEN SIGNATURE CERTIFICATE
        s.initSign((PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null));
        s.update(dataBuffer);
        byte [] sign = s.sign();
-       
+       System.out.println("Dados assinados.");
        return sign;
-       
+
        //Verificar assinatura
        /*Signature s2 = Signature.getInstance("SHA256withRSA");
        byte [] dataBuffer2 = "So_para_o_teste".getBytes();
@@ -115,7 +125,7 @@ public class SecurityClient {
      * @throws java.security.NoSuchAlgorithmException 
      * @throws java.security.cert.CertificateException 
      */
-    public static void validCertChain() throws KeyStoreException, NoSuchAlgorithmException, CertPathBuilderException, InvalidAlgorithmParameterException, FileNotFoundException, IOException, CertificateException{
+    static void validCertChain() throws KeyStoreException, NoSuchAlgorithmException, CertPathBuilderException, InvalidAlgorithmParameterException, FileNotFoundException, IOException, CertificateException{
        //Validar cadeia de certificados
        File f = new File("CC_KS");
        InputStream is = new FileInputStream(f);
@@ -167,7 +177,7 @@ public class SecurityClient {
      * @throws java.io.IOException
      * @throws java.security.GeneralSecurityException
      */
-    public static byte[] encryptMsg(byte[] input, PublicKey keyServer) throws IOException, GeneralSecurityException {
+    static byte[] encryptMsg(byte[] input, Key keyServer) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.ENCRYPT_MODE, keyServer);
         byte[] output = cipher.doFinal(input);
