@@ -9,17 +9,28 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.security.spec.KeySpec;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.json.*;
 
@@ -295,6 +306,25 @@ public class Client {
                System.out.println("Ready to generate Symetric Key.");
            }
         }
+        
+        //Ver algoritmos a usar
+        //Gerar chave simétrica
+        if(simetricKeyGen){
+            try {
+                KeyGenerator kgen = KeyGenerator.getInstance("AES");
+                kgen.init(128, new SecureRandom());
+                SecretKey secretKey = kgen.generateKey();
+                byte[] enCodeFormat = secretKey.getEncoded();
+                SecretKey key = new SecretKeySpec(enCodeFormat, "DES");
+                System.out.println(key.toString());
+            } catch (NoSuchAlgorithmException ex) {
+                System.out.println("Impossible to generate Symetric Key.");
+            }
+        }
+        
+        
+        
+        
     }
     
     /**
@@ -315,4 +345,5 @@ public class Client {
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
     }
+    
 }

@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
@@ -31,6 +32,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import javax.crypto.Cipher;
 
 public class SecurityClient {
     
@@ -153,5 +155,21 @@ public class SecurityClient {
         }
         
         CertPathValidator cpv = CertPathValidator.getInstance( "PKIX" );
+    }
+    
+    /**
+     * Encripta uma mensagem, usando chaves assimetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keyServer chave publica do servidor neste caso
+     * @return mensagem encriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    public byte[] encryptMsg(byte[] input, PublicKey keyServer) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, keyServer);
+        byte[] output = cipher.doFinal(input);
+        return output;
     }
 }
