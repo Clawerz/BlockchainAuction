@@ -35,7 +35,15 @@ import java.util.List;
 public class SecurityClient {
     
     public static KeyStore ks;
-    //Inicializar
+    /**
+     * Configurações iniciais para o uso do cartão de cidadão.
+     * 
+     * @throws java.security.KeyStoreException
+     * @throws IOException 
+     * @throws java.security.NoSuchProviderException 
+     * @throws java.security.NoSuchAlgorithmException 
+     * @throws java.security.cert.CertificateException 
+     */
     public static void init() throws KeyStoreException, IOException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException{
         Provider p = Security.getProvider("SunPKCS11");
         p = p.configure("CitizenCard.cfg");
@@ -52,12 +60,28 @@ public class SecurityClient {
         }*/
     }
     
+    /**
+     * Devolve o certificado de autenticação do cartão de cidadão
+     * 
+     * @return Certificado de autenticação do CC
+     * @throws java.security.KeyStoreException
+     */
     public static X509Certificate getCCCertificate() throws KeyStoreException{
         X509Certificate cert = (X509Certificate) ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE");
         return cert;
     }
      
-    //Assinar
+    /**
+     * Assina uma mensagem
+     * 
+     * @param ks Keystore com as chaves para assinar
+     * @throws java.security.NoSuchAlgorithmException
+     * @throws java.security.InvalidKeyException
+     * @throws java.security.SignatureException
+     * @throws java.security.KeyStoreException
+     * @throws java.security.UnrecoverableKeyException
+
+     */
     public static void sign(KeyStore ks) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
        //Fazer assinatura de um objecto
        byte [] dataBuffer = "So_para_o_teste".getBytes();
@@ -77,7 +101,17 @@ public class SecurityClient {
        }
     }
     
-    //Validar cadeia de certificados
+    /**
+     * TOCOMPLETE : Valida cadeia de certificados
+     * 
+     * @throws java.security.KeyStoreException
+     * @throws IOException 
+     * @throws java.security.cert.CertPathBuilderException 
+     * @throws java.security.InvalidAlgorithmParameterException 
+     * @throws java.io.FileNotFoundException 
+     * @throws java.security.NoSuchAlgorithmException 
+     * @throws java.security.cert.CertificateException 
+     */
     public static void validCertChain() throws KeyStoreException, NoSuchAlgorithmException, CertPathBuilderException, InvalidAlgorithmParameterException, FileNotFoundException, IOException, CertificateException{
        //Validar cadeia de certificados
        File f = new File("CC_KS");

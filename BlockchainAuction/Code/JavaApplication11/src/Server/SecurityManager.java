@@ -27,7 +27,11 @@ import sun.security.x509.X509CertInfo;
 
 public class SecurityManager {
     
-    //Criar par de chaves
+    /** 
+    * Gera um par de chaves através de RSA
+     * @return Par de chaves gerado
+     * @throws java.security.NoSuchAlgorithmException
+     */ 
     public static KeyPair generateKey() throws NoSuchAlgorithmException {
         //Usamos RSA
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -38,16 +42,15 @@ public class SecurityManager {
         return keyPair;
     }
     
-    //Criar certificado
-    //X509Certificate cert = createSelfSignedCertificate(keyPair,"CN=Auction_Manager, L=AV, C=PT", 100, "SHA1withRSA");
     /** 
-    * Create a self-signed X.509 Certificate
-     * @param pair the KeyPair
-     * @param dn the X.509 Distinguished Name, eg "CN=Diogo, L=OAz, C=PT"
-     * @param days how many days from now the Certificate is valid for
-     * @param algorithm the signing algorithm, eg "SHA1withRSA"
+    * Cria um certificado X.509 auto-assinado
+     * @param keyPair par de chaves
+     * @param dn um nome distinto X.509 , eg "Filipe Certificate"
+     * @param ndays número de dias a contar de agora para o qual o certificado é válido
+     * @param algorithm algoritmo de assinatura, eg "SHA1withRSA"
+     * @return Certificado auto-assinado
      * 
-     * adapted from source: https://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate/
+     * adaptado de : https://bfo.com/blog/2011/03/08/odds_and_ends_creating_a_new_x_509_certificate/
      */ 
     public static X509Certificate generateCert(KeyPair keyPair, String dn, int ndays, String algorithm){
 	PrivateKey privkey = keyPair.getPrivate();
@@ -94,6 +97,10 @@ public class SecurityManager {
             return null;
 	}
     
+    /** 
+    * Imprime informações sobre um certificado
+     * @param cert Certificado para o qual queremos ver as informações
+     */ 
     public static void printCertificateSpecs(X509Certificate cert){
 	System.out.println("\nCertificate info:");
 	Principal p = cert.getIssuerDN();
@@ -106,8 +113,5 @@ public class SecurityManager {
 	System.out.println("Certificate hashcode: " + cert.hashCode());
 	System.out.println("Certificate toString(): " + cert.toString());
     }
-    
-    
-            
 
 }

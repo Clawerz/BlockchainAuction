@@ -17,8 +17,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -72,45 +70,41 @@ public class AuctionManager {
          
           //Ver tipo de mensagem
           ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg, cert);
-          
-          /*DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-          serverSocket.receive(receivePacket);
-          String RepositoryMsg = new String(receivePacket.getData());
-          System.out.print("\nRepository: " + RepositoryMsg);
-          
-          //Ver tipo de mensagem
-          ComputeMessageType(ClientIP,ClientPort,serverSocket,RepositoryMsg);*/
       }
     }
     
     /**
-     * Dependendo do tipo de mensagem recebida executa o pedido pela mesma.
-     * Tipos de mensagens 
-     * <ul>
-        *<li>cta - Criar leilão</li>
-        *<li>tta - Terminar leilão</li>
-        *<li>gba - Ver bids feitos em um leilão</li>
-        *<li>gbc - Ver bids feitos por um cliente</li>
-        *<li>lga - Listar todos os leilões ativos</li>
-        *<li>lta - Listar todos os leilões inativos</li>
-        *<li>coa - Ver resultado de um leilão</li>
-        *<li>vlr - Validar recibo</li>
-        *<li>rct - Reposta do Repositório a criar leilão</li>
-        *<li>rtt - Reposta do Repositório a terminar leilão</li>
-        *<li>rgb - Reposta do Repositório a ver bids feitos em um leilão</li>
-        *<li>rgc - Reposta do Repositório a ver bids feitos por um cliente</li>
-        *<li>rlg - Reposta do Repositório a listar todos os leilões ativos</li>
-        *<li>rlt - Reposta do Repositório a listar todos os leilões inativos</li>
-        *<li>rco - Reposta do Repositório a ver resultado de um leilão</li>
-        *<li>rvl - Reposta do Repositório a validar recibo</li>
-        *<li>end - Terminar tudo</li>
+     * Dependendo do tipo de mensagem recebida executa o pedido pela mesma.Tipos de mensagens 
+    <ul>
+    <li>init - Troca de certificados</li>
+    <li>cta - Criar leilão</li>
+    <li>tta - Terminar leilão</li>
+    <li>gba - Ver bids feitos em um leilão</li>
+    <li>gbc - Ver bids feitos por um cliente</li>
+    <li>lga - Listar todos os leilões ativos</li>
+    <li>lta - Listar todos os leilões inativos</li>
+    <li>coa - Ver resultado de um leilão</li>
+    <li>vlr - Validar recibo</li>
+    <li>rct - Reposta do Repositório a criar leilão</li>
+    <li>rtt - Reposta do Repositório a terminar leilão</li>
+    <li>rgb - Reposta do Repositório a ver bids feitos em um leilão</li>
+    <li>rgc - Reposta do Repositório a ver bids feitos por um cliente</li>
+    <li>rlg - Reposta do Repositório a listar todos os leilões ativos</li>
+    <li>rlt - Reposta do Repositório a listar todos os leilões inativos</li>
+    <li>rco - Reposta do Repositório a ver resultado de um leilão</li>
+    <li>rvl - Reposta do Repositório a validar recibo</li>
+    <li>end - Terminar tudo</li>
         </ul>
      * 
      * @param ClientIP IP do cliente
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param msg Mensagem a ser interpretada
+     * @param cert Certificado
      * @throws IOException 
+     * @throws java.net.UnknownHostException 
+     * @throws java.security.cert.CertificateEncodingException 
+     * @throws java.security.KeyStoreException 
      */
     public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException{
         String type = msg.getString(("Type"));
@@ -120,8 +114,6 @@ public class AuctionManager {
         switch(type){
             case "init":
                     //Mandar certificado 
-                    //Gson gson = new Gson();
-                    //retJSON = new JSONObject("{ \"Type\":\"initCert\",\"Certificate\":"+gson.toJson(cert)+"}");
                     messageClientCert(ClientIP, ClientPort,serverSocket,cert);
                     
                     byte[] receivebuffer = new byte[32768];
@@ -179,7 +171,7 @@ public class AuctionManager {
     public static void messageRepository(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
         
         sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
@@ -197,14 +189,25 @@ public class AuctionManager {
      * @throws IOException 
      */
     public static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
         sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
     }
     
+    /**
+     * Função que manda mensagem para o cliente com o certificado do servidor.
+     * 
+     * @param ClientIP IP do cliente
+     * @param ClientPort Número da porta do cliente
+     * @param serverSocket Socket do Auction Manager
+     * @param cert Certificado do servidor
+     * @throws UnknownHostException
+     * @throws IOException 
+     * @throws java.security.cert.CertificateEncodingException 
+     */
     public static void messageClientCert(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
-        byte[] sendbuffer  = new byte[32768];
+        byte[] sendbuffer;
         sendbuffer = cert.getEncoded();
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);

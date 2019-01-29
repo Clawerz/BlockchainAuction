@@ -1,11 +1,5 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package Client;
 
-import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,14 +13,12 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 import java.util.List;
 
 import org.json.*;
@@ -233,7 +225,6 @@ public class Client {
         }
     }
     
-    
     /**
      * Função que manda mensagem para o repositorio.
      * 
@@ -245,7 +236,7 @@ public class Client {
     public static void messageRepository(DatagramSocket clientSocket, JSONObject msg) throws UnknownHostException, IOException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
 
         sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
@@ -257,7 +248,16 @@ public class Client {
         }
     }
     
-    //Função para iniciar comunicação
+    /**
+     * Função que inicia a comunicação.Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
+     * 
+     * @param clientSocket Socket do Cliente
+     * @param managerKey Chave publica do manager
+     * @throws UnknownHostException
+     * @throws java.security.cert.CertificateException
+     * @throws java.security.KeyStoreException
+     * @throws IOException
+     */
     public static void initCommunication(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException{
         String sendMsg = "{ \"Type\":init}";
         JSONObject sendObj = new JSONObject(sendMsg);
@@ -297,10 +297,19 @@ public class Client {
         }
     }
     
+    /**
+     * Envia o certificado do cliente para o Servidor Manager
+     * 
+     * @param clientSocket Socket do Cliente
+     * @param cert Certificado do CC
+     * @throws java.net.UnknownHostException
+     * @throws IOException
+     * @throws java.security.cert.CertificateEncodingException
+     */
     public static void messageManagerCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
-        byte[] sendbuffer  = new byte[32768];
+        byte[] sendbuffer;
         sendbuffer = cert.getEncoded();
         
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ServerIP ,ServerPort);
