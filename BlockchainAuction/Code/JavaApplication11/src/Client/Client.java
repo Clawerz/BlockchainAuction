@@ -22,6 +22,7 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -49,7 +50,7 @@ public class Client {
         clientID++;
     }
     
-    public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException {
+    public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, GeneralSecurityException {
         
         //Security
         SecurityClient.init();
@@ -269,7 +270,7 @@ public class Client {
      * @throws java.security.KeyStoreException
      * @throws IOException
      */
-    public static void initCommunication(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException{
+    public static void initCommunication(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
         String sendMsg = "{ \"Type\":init}";
         JSONObject sendObj = new JSONObject(sendMsg);
         messageManager(clientSocket,sendObj);
@@ -309,22 +310,27 @@ public class Client {
         
         //Ver algoritmos a usar
         //Gerar chave simétrica
+        SecretKey key = null ;
         if(simetricKeyGen){
             try {
                 KeyGenerator kgen = KeyGenerator.getInstance("AES");
                 kgen.init(128, new SecureRandom());
                 SecretKey secretKey = kgen.generateKey();
                 byte[] enCodeFormat = secretKey.getEncoded();
-                SecretKey key = new SecretKeySpec(enCodeFormat, "DES");
+                key = new SecretKeySpec(enCodeFormat, "DES");
                 System.out.println(key.toString());
+                byte[] symKey = SecurityClient.encryptMsg(key.getEncoded(),managerKey);
+                /*symKey = SecurityClient.sign(symKey);
+                
+                //Envia chave simetrica
+                sendMsg = "{ \"Type\":init,\"Sym\":"+symKey.toString()+"}";
+                sendObj = new JSONObject(sendMsg);
+                messageManager(clientSocket,sendObj);*/
+                
             } catch (NoSuchAlgorithmException ex) {
                 System.out.println("Impossible to generate Symetric Key.");
             }
-        }
-        
-        
-        
-        
+        }   
     }
     
     /**

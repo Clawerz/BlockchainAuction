@@ -84,23 +84,24 @@ public class SecurityClient {
      * @throws java.security.UnrecoverableKeyException
 
      */
-    public static void sign(KeyStore ks) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
+    public static byte[] sign(byte[] dataBuffer) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
        //Fazer assinatura de um objecto
-       byte [] dataBuffer = "So_para_o_teste".getBytes();
        Signature s = Signature.getInstance("SHA256withRSA");
        //Os ALIAS podem ser o CITIZEN AUTHENTICATION CERTIFICATE ou CITIZEN SIGNATURE CERTIFICATE
        s.initSign((PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null));
        s.update(dataBuffer);
        byte [] sign = s.sign();
        
+       return sign;
+       
        //Verificar assinatura
-       Signature s2 = Signature.getInstance("SHA256withRSA");
+       /*Signature s2 = Signature.getInstance("SHA256withRSA");
        byte [] dataBuffer2 = "So_para_o_teste".getBytes();
        s2.initVerify(ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE"));
        s2.update(dataBuffer2);
        if(s2.verify(sign)){
            System.out.println("Assinatura verificada com sucesso!");
-       }
+       }*/
     }
     
     /**
@@ -166,7 +167,7 @@ public class SecurityClient {
      * @throws java.io.IOException
      * @throws java.security.GeneralSecurityException
      */
-    public byte[] encryptMsg(byte[] input, PublicKey keyServer) throws IOException, GeneralSecurityException {
+    public static byte[] encryptMsg(byte[] input, PublicKey keyServer) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");
         cipher.init(Cipher.ENCRYPT_MODE, keyServer);
         byte[] output = cipher.doFinal(input);

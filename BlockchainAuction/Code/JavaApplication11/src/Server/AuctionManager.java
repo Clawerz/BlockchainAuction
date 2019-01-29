@@ -1,4 +1,5 @@
 package Server;
+import static Client.SecurityClient.ks;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -10,6 +11,7 @@ import java.security.KeyPair;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
@@ -106,7 +108,7 @@ public class AuctionManager {
      * @throws java.security.cert.CertificateEncodingException 
      * @throws java.security.KeyStoreException 
      */
-    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException{
+    public static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException, NoSuchAlgorithmException{
         String type = msg.getString(("Type"));
         String retMsg="";
         JSONObject retJSON;
@@ -138,6 +140,18 @@ public class AuctionManager {
                         messageClient(ClientIP, ClientPort,serverSocket, retJSON);
                         System.out.println("Certificate invalid");
                     }
+                    
+                    /*String SymReceivedMsg = new String(receivePacket.getData());
+                    JSONObject symMsg = new JSONObject(SymReceivedMsg);
+                    byte[] symKey = (byte[]) symMsg.get("Sym");
+                    Signature s2 = Signature.getInstance("SHA256withRSA");
+                    byte [] dataBuffer2 = "So_para_o_teste".getBytes();
+                    s2.initVerify(ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE"));
+                    s2.update(dataBuffer2);
+                    if(s2.verify(sign)) System.out.println("Assinatura verificada com sucesso!");*/
+                    
+                    
+                    
                     
                     break;
         
