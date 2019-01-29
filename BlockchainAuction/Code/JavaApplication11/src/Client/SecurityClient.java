@@ -16,6 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.Signature;
@@ -31,6 +32,7 @@ import java.security.cert.PKIXCertPathBuilderResult;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import javax.crypto.Cipher;
@@ -182,5 +184,20 @@ public class SecurityClient {
         cipher.init(Cipher.ENCRYPT_MODE, keyServer);
         byte[] output = cipher.doFinal(input);
         return output;
+    }
+    
+    /**
+     * Gerar cryptopuzzle
+     * 
+     * @return Number for cryptopuzzle
+     */
+    static byte[] puzzleSolve(byte[] puzzle) {
+        byte[] solution = new byte[2];
+        while(!Arrays.equals(solution, puzzle)){
+            SecureRandom secRan = new SecureRandom(); 
+            secRan.nextBytes(solution); 
+            //System.out.println(Arrays.toString(solution));
+        }
+        return solution;
     }
 }

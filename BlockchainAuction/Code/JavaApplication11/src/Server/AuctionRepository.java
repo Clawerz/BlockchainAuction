@@ -1,5 +1,6 @@
 package Server;
 import Auction.*;
+import com.google.gson.Gson;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -7,6 +8,8 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -278,7 +281,40 @@ public class AuctionRepository {
                     messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                     break;
                 
-            case "bid":
+            case "bid":              
+                //Enviar cryptopuzzle
+                byte[] puzzle = SecurityRepository.puzzleGenerate();
+                Gson gson = new Gson();   
+                String json = ""+gson.toJson(puzzle);
+                String sendMsg = "{ \"Type\":\"Puzzle\",\"Data\":"+json+"}";
+                JSONObject sendObj = new JSONObject(sendMsg); 
+                messageClient(ClientIP,ClientPort,serverSocket,sendObj);
+                
+                //Verificar cryptopuzzle
+                byte[] receivebufferBid = new byte[32768];
+                DatagramPacket receivePacketBid = new DatagramPacket(receivebufferBid, receivebufferBid.length);
+                serverSocket.receive(receivePacketBid);
+                String puzzleReceivedMsg = new String(receivePacketBid.getData());
+                JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
+                JSONArray data = puzzleMsg.getJSONArray("Data");
+                byte[] solution = gson.fromJson(data.toString(), byte[].class);
+                
+                //Enviar resposta ao cliente
+                if(Arrays.equals(solution, puzzle)){
+                    System.out.println("ENVIADO");
+                    sendMsg = "{ \"Type\":\"Puzzle\",\"Result\":\"SUCESS\"}";
+                    sendObj = new JSONObject(sendMsg);
+                    System.out.println(sendObj.toString());
+                    messageClient(ClientIP,ClientPort,serverSocket,sendObj);
+                }
+                
+                //Esperar bid
+                byte[] receivebufferBidFinal = new byte[32768];
+                DatagramPacket receivePacketBidFinal = new DatagramPacket(receivebufferBidFinal, receivebufferBidFinal.length);
+                serverSocket.receive(receivePacketBidFinal);
+                String ReceivedMsg = new String(receivePacketBidFinal.getData());
+                msg = new JSONObject(ReceivedMsg);
+                
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName")))
                     {
@@ -290,6 +326,7 @@ public class AuctionRepository {
                 retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
+
                 
             case "end":
                     serverSocket.close();

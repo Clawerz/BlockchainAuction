@@ -38,6 +38,7 @@ import org.json.*;
  */
 public class Client {
     private static int clientID=0;
+    private static boolean bid = false;
     private static boolean simetricKeyGen = false;
     private static SecretKey secretKey = null;
     private static PublicKey managerKey = null;
@@ -174,13 +175,50 @@ public class Client {
                         
                     case "9":
                         messageType = "bid";
-                        System.out.print("\nNome: ");
-                        auctionName = br.readLine();
-                        System.out.print("\nAmount: ");
-                        amount = Double.parseDouble(br.readLine());
-                        sendMsg = "{ \"Type\":"+messageType+",\"AuctionName\":"+auctionName+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
+                        sendMsg = "{ \"Type\":"+messageType+"}";
                         sendObj = new JSONObject(sendMsg);
                         messageRepository(clientSocket,sendObj);
+                                    
+                        //Obter puzzle
+                        byte[] receivebufferBid = new byte[32768];
+                        DatagramPacket receivePacketBid = new DatagramPacket(receivebufferBid, receivebufferBid.length);
+                        clientSocket.receive(receivePacketBid);
+                        String puzzleReceivedMsg = new String(receivePacketBid.getData());
+                        JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
+                        Gson gson = new Gson();
+                        JSONArray data = puzzleMsg.getJSONArray("Data");
+                        byte[] puzzle = gson.fromJson(data.toString(), byte[].class);
+                        
+                        //Resolver puzzle
+                        byte[] solution = SecurityClient.puzzleSolve(puzzle); 
+                        String json = ""+gson.toJson(solution);
+                        String sendMsgRep = "{ \"Type\":\"Puzzle\",\"Data\":"+json+"}";
+                        JSONObject sendObjRep = new JSONObject(sendMsgRep); 
+                        messageRepository(clientSocket,sendObjRep);
+                        
+                        //Obter resposta da solução
+                        byte[] receivebufferSol = new byte[32768];
+                        DatagramPacket receivePacketSol = new DatagramPacket(receivebufferSol, receivebufferSol.length);
+                        clientSocket.receive(receivePacketSol);
+                        String SolReceivedMsg = new String(receivePacketSol.getData());
+                        JSONObject solMsg = new JSONObject(SolReceivedMsg);
+                        String result = solMsg.getString("Result");
+                        if(result.equals(("SUCESS"))) bid = true;
+                        
+                        if(bid){
+                            messageType = "bid";
+                            System.out.print("\nNome: ");
+                            auctionName = br.readLine();
+                            System.out.print("\nAmount: ");
+                            amount = Double.parseDouble(br.readLine());
+                            sendMsg = "{ \"Type\":"+messageType+",\"AuctionName\":"+auctionName+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
+                            sendObj = new JSONObject(sendMsg);
+                            messageRepository(clientSocket,sendObj);
+                        }else{
+                            System.out.println("ERROR : Solve the puzzle first");
+                        }
+                        
+                        
                         break;
                         
                     default:
