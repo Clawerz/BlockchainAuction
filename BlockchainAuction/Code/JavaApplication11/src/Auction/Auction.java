@@ -34,6 +34,7 @@ public class Auction {
         this.auctionID = auctionID;
         this.timeToFinish = timeToFinish;
         this.englishAuction = englishAuction;
+        this.buyerID = -1;
         auctionFinished = false;
     }
 

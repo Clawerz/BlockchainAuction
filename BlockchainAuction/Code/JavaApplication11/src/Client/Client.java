@@ -142,7 +142,7 @@ public class Client {
                         messageType = "gba";
                         System.out.print("\nNome: ");
                         auctionName = br.readLine();
-                        sendMsg = "{ \"Type\":"+messageType+ ",\"Name\":"+auctionName+"}";
+                        sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionName\":"+auctionName+"}";
                         sendObj = new JSONObject(sendMsg);
                         messageRepository(clientSocket,sendObj);
                         break;
@@ -160,7 +160,7 @@ public class Client {
                         messageType = "coa";
                         System.out.print("\nNome: ");
                         auctionName = br.readLine();
-                        sendMsg = "{ \"Type\":"+messageType+ ",\"Name\":"+auctionName+"}";
+                        sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionName\":"+auctionName+"}";
                         sendObj = new JSONObject(sendMsg);
                         messageRepository(clientSocket,sendObj);
                         break;
@@ -178,7 +178,7 @@ public class Client {
                         auctionName = br.readLine();
                         System.out.print("\nAmount: ");
                         amount = Double.parseDouble(br.readLine());
-                        sendMsg = "{ \"Type\":"+messageType+",\"Name\":"+auctionName+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
+                        sendMsg = "{ \"Type\":"+messageType+",\"AuctionName\":"+auctionName+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
                         sendObj = new JSONObject(sendMsg);
                         messageRepository(clientSocket,sendObj);
                         break;
@@ -197,7 +197,11 @@ public class Client {
             JSONObject rec = new JSONObject(serverData);
             for(int i=0; i < rec.names().length();i++){
                 List tmp = rec.names().toList();
-                System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                try{
+                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                }catch(JSONException e){
+                    System.out.print("\nServer: " + rec.get(tmp.get(i).toString()));
+                }
             }
 
         }
