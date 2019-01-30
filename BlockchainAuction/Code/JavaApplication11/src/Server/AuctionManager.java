@@ -77,21 +77,6 @@ public class AuctionManager {
           serverSocket.receive(recvdpkt); 
           String ReceivedMsg = "";
           ReceivedMsg = new String(recvdpkt.getData());
-          /*if(!clientSecret.isEmpty()){
-            //Obter IV
-            byte[] receivedBytes = recvdpkt.getData();
-            byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16);
-            byte[] msg = Arrays.copyOfRange(receivedBytes, 16, receivedBytes.length);
-
-            //Decriptar mensagem
-            msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID), IV);
-            ReceivedMsg = new String(msg);
-            System.out.println(ReceivedMsg+"FDS QUE GAJO INTELIGENTE");
-            System.exit(1);
-          
-           }else{
-             ReceivedMsg = new String(recvdpkt.getData());
-           }*/
           
           //Obter endereço do client
           if((!recvdpkt.getAddress().toString().equals("127.0.0.1")) && (recvdpkt.getPort()!=9876 )){
@@ -101,7 +86,7 @@ public class AuctionManager {
           }
           
           JSONObject recMsg = new JSONObject(ReceivedMsg);
-          System.out.println("\nClient : " + recMsg.toString());
+          System.out.println("Client : " + recMsg.toString());
           
           //Ver tipo de mensagem
           ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg, cert);

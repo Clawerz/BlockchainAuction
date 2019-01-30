@@ -50,13 +50,14 @@ public class Client {
     private static String serverData;
     private static JSONObject rec;
     
-    
     private static boolean bid = false;
     private static boolean simetricKeyGen = false;
+    
     //Manager
     private static SecretKey secretKeyManager = null;
     private static PublicKey managerKey = null;
     private static Certificate managerCert = null;
+    
     //Repository
     private static SecretKey secretKeyRepository = null;
     private static PublicKey repositoryKey = null;
@@ -74,7 +75,6 @@ public class Client {
         byte[] sendbuffer = new byte[1024];
         initCommunicationManager(clientSocket,managerKey);
         initCommunicationRepository(clientSocket,repositoryKey);
-        
         int clientID = 0;
         
         //Convert to json, cuidado com a maneria como se constroio a mesnagem
@@ -158,7 +158,6 @@ public class Client {
                         //Convert to json, cuidado com a maneria como se constroio a mesnagem
                         sendMsg = "{ \"Type\":"+messageType+",\"clientID\":"+clientID+",\"Name\":\""+auctionName+ "\",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
                         
-                        //System.out.println(obj.getString("Type"));
                         rec = messageManager(clientSocket, sendMsg);
                         
                         type = rec.getString(("Type"));
@@ -572,7 +571,7 @@ public class Client {
         byte[] initializationVector = new byte[16];
         SecureRandom secRan = new SecureRandom(); 
         secRan.nextBytes(initializationVector);
-        //System.out.println(Arrays.toString(initializationVector));
+
         //Encriptrar
         sendbuffer = msg.getBytes();
         sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyRepository,initializationVector);
@@ -581,7 +580,6 @@ public class Client {
         System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
         System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
               
-        System.out.println(Arrays.toString(sendbufferIV));
         DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
@@ -629,13 +627,10 @@ public class Client {
         try{
             certificate.checkValidity();
             managerKey = certificate.getPublicKey();
-            //System.out.println(SecurityClient.getCCCertificate().toString());
             messageManagerCert(clientSocket, SecurityClient.getCCCertificate());
-            //System.out.println("Certificate valid");
         }catch(CertificateExpiredException | CertificateNotYetValidException e){
             System.out.println("Certificate not valid ");
         }
-        //System.out.println(certificate.toString());
         
         clientSocket.receive(receivePacket);
         String ReceivedMsg = new String(receivePacket.getData());
@@ -646,7 +641,6 @@ public class Client {
            String msg = recMsg.getString(("Message"));
            if(msg.equals("Valid certificate")){
                simetricKeyGen = true;
-               //System.out.println("Ready to generate Symetric Key.");
            }
         }
         
@@ -664,7 +658,6 @@ public class Client {
                 
                 //Encriptar
                 byte[] symKey = SecurityClient.encryptMsg(digest,SecurityClient.getPrivateKey());
-                //System.out.println(Arrays.toString(secretKey.toString().getBytes()));
                 
                 //Envia chave simetrica
                 Gson gson = new Gson();
@@ -715,13 +708,10 @@ public class Client {
         try{
             certificate.checkValidity();
             repositoryKey = certificate.getPublicKey();
-            //System.out.println(SecurityClient.getCCCertificate().toString());
             messageRepositoryCert(clientSocket, SecurityClient.getCCCertificate());
-            //System.out.println("Certificate valid");
         }catch(CertificateExpiredException | CertificateNotYetValidException e){
             System.out.println("Certificate not valid ");
         }
-        //System.out.println(certificate.toString());
         
         clientSocket.receive(receivePacket);
         String ReceivedMsg = new String(receivePacket.getData());
@@ -740,10 +730,7 @@ public class Client {
         //Gerar chave simétrica
         if(simetricKeyGen){
             try {
-                //KeyGenerator kgen = KeyGenerator.getInstance("AES");
-                //kgen.init(128, new SecureRandom());
                 secretKeyRepository = KeyGenerator.getInstance("AES").generateKey();
-                //secretKeyRepository = kgen.generateKey();  
                 
                 //Assinar chave
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -764,10 +751,7 @@ public class Client {
         }
         sendbuffer = sendObj.toString().getBytes();        
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
-        clientSocket.send(sendPacket);
-        
-        System.out.print("INIT-END");
-        
+        clientSocket.send(sendPacket);        
         
     }
     

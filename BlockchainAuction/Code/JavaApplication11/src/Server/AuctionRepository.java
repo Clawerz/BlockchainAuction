@@ -80,21 +80,12 @@ public class AuctionRepository {
             ClientIP = recvdpkt.getAddress();
             ClientPort = recvdpkt.getPort();
             byte[] receivedBytes = recvdpkt.getData();
-            //Thread.sleep(2000);
-            /*int i=0;
-            while(i<receivedBytes.length){
-                if(receivedBytes[i]!=0) i++;
-                else break;
-            }*/
             String ReceivedMsg = "";
-            //Thread.sleep(1000);
-            //System.out.println(Arrays.toString(receivedBytes));
+
             if(!(clientSecret.isEmpty() || new String(receivedBytes).contains("Type"))){
                 byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
                 byte[] msg = Arrays.copyOfRange(receivedBytes, 16, recvdpkt.getLength()); //Msg igual
-                //Thread.sleep(2000);
-                //System.out.println(Arrays.toString(IV));
-                //System.out.println(Arrays.toString(msg));
+
                 //Decriptar mensagem
                 msg = SecurityRepository.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
                 ReceivedMsg = new String(msg);
@@ -105,8 +96,6 @@ public class AuctionRepository {
             }
           
             JSONObject recMsg = new JSONObject(ReceivedMsg);
-            //System.out.println("\nManager : "+ ReceivedMsg);
-
             ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort,cert);
 
         }
@@ -144,6 +133,7 @@ public class AuctionRepository {
      */
     
     private static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, GeneralSecurityException, InterruptedException{
+        
         String type = msg.getString(("Type"));
         String retMsg="";
         Gson gson = new Gson();
@@ -151,6 +141,7 @@ public class AuctionRepository {
         
         switch(type){
             case "init":
+                
                     //Mandar certificado 
                     messageClientCert(ClientIP, ClientPort,serverSocket,cert);
                     
@@ -164,7 +155,6 @@ public class AuctionRepository {
                     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
                     X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
                     clientCert.add(certificate);
-                    //System.out.println(certificate.toString());
                     
                     //Validar certificado
                     try{
@@ -173,12 +163,10 @@ public class AuctionRepository {
                         retMsg = "Valid certificate";
                         retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
                         messageClient(ClientIP, ClientPort,serverSocket, retJSON);
-                        //System.out.println("Certificate valid");
                     }catch(IOException | CertificateExpiredException | CertificateNotYetValidException | JSONException e){
                         retMsg = "Invalid certificate";
                         retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
                         messageClient(ClientIP, ClientPort,serverSocket, retJSON);
-                        //System.out.println("Certificate invalid");
                     }
                     
                     //Receber chave simétrica
@@ -200,28 +188,25 @@ public class AuctionRepository {
                     byte[] digest = messageDigest.digest(dataHash);
                     
                     //Obter chave simétrica
-                    //SecretKey symetricKey = new SecretKey()
                     SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
-
-                    //System.out.println("key inside"+Arrays.toString(symetricKey.getEncoded()));
                     
                     if(Arrays.equals(digest, symKey)){
                         clientSecret.add(symetricKey);
-                        //System.out.println(Arrays.toString(symetricKey.toString().getBytes()));
                         //System.out.println("Assinatura validada !");
                     }else{
                         System.out.println("Assinatura inválida !");
-                        //System.out.println(Arrays.toString(digest));
-                        //System.out.println(Arrays.toString(symKey));
                     }
                     
                     break;
                     
             case "clientID":
-                    newClientID();
-                    break;
+                    
+                //Incrementa número de cliente
+                newClientID();
+                break;
                     
             case "cta": 
+                
                 //leilão inglês ou leilão cego
                 boolean englishAuction=true;
                 newAuctionID();
@@ -238,9 +223,11 @@ public class AuctionRepository {
                 break;
                 
             case "tta" : 
+                
                 //Terminar leilão
                 boolean found = false;
                 double value = 0;
+                
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar mudar o estado desse leilão
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")) {
@@ -265,15 +252,14 @@ public class AuctionRepository {
                 break;
                 
             case "gba" : 
+                
                 //Listar todos os bids de um client
                 retMsg="";
                 String arrayBidsValues = "";
+                
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")){
-                        /*for(int j=0; j<AuctionList.get(i).getBids().size(); j++){
-                            retMsg+= AuctionList.get(i).getBids().get(j).getValue()+" ";
-                        }*/
                         for(int j=0; j<AuctionList.get(i).getBids().size(); j++){
                             if(j!=AuctionList.get(i).getBids().size()-1){
                                 arrayBidsValues += AuctionList.get(i).getBids().get(j).getValue() + ",";
@@ -283,18 +269,18 @@ public class AuctionRepository {
                         }
                     }
                  }
-                
-                System.out.println("bids -> "+ retMsg);
-              
+                              
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"Bids\",\"Message\":\"Operation completed with sucess!\",\"Bids\":["+ arrayBidsValues +"]}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
             case "gbc" : 
+                
                 //Listar todos os bids de um client
                 retMsg="";
                 arrayBidsValues = "";
+                
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 for(int i=0; i<AuctionList.size();i++){
                         for(int j=0; j<AuctionList.get(i).getBids().size(); j++){
@@ -314,8 +300,10 @@ public class AuctionRepository {
                 break;
                 
             case  "lga": 
+                
                 //Listar todos os leilões ativos
                 retMsg="";
+                
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 int activeAuctionTotal = 0;
                 for(int i=0; i<AuctionList.size();i++){
@@ -329,13 +317,14 @@ public class AuctionRepository {
                 
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotal + retMsg + "}");
-                
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
             case  "lgaClient": 
+                
                 //Listar todos os leilões ativos de um cliente
                 retMsg="";
+                
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 activeAuctionTotal = 0;
                 for(int i=0; i<AuctionList.size();i++){
@@ -351,13 +340,14 @@ public class AuctionRepository {
                 
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotal + retMsg + "}");
-                
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
             case  "lta": 
+                
                 //Listar todos os leilões inativos
                 retMsg="";
+                
                 //Percorrer todos os leilões, os que tiverem inativos são adicionados á string
                 int inactiveAuctionTotal = 0;
                 for(int i=0; i<AuctionList.size();i++){
@@ -375,10 +365,11 @@ public class AuctionRepository {
                 break;
                 
             case  "coa":
+                
                 //Ver resultado de um leilão
                 retMsg="";
-                
                 found = false;
+                
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar obter toda a informação sobre o leilão
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")){
@@ -394,19 +385,22 @@ public class AuctionRepository {
                 if(!found){
                     retMsg= ",\"AuctionID\":0";
                 }
+                
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"AuctionOutcome\",\"Message\":\"Operation completed with sucess!\"" + retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
             case  "vlr":
+                
                     //Não faz nada por agora, pois ainda não sabemos como validar recibos
                     //Devolver mensagem
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Ainda não foi implementado\"}");
                     messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                     break;
                              
-            case "bid":              
+            case "bid":     
+                
                 //Enviar cryptopuzzle
                 byte[] puzzle = SecurityRepository.puzzleGenerate();
                 String json = ""+gson.toJson(puzzle);
@@ -417,62 +411,46 @@ public class AuctionRepository {
                 //Verificar cryptopuzzle
                 byte[] receivebufferBid = new byte[32768];
                 DatagramPacket receivePacketBid = new DatagramPacket(receivebufferBid, receivebufferBid.length);
-                serverSocket.receive(receivePacketBid);
-                //String puzzleReceivedMsg = new String(receivePacketBid.getData());
+                serverSocket.receive(receivePacketBid); 
                 
                 //Decriptar
                 byte[] receivedBytes = receivePacketBid.getData();
-                /*Thread.sleep(2000);
-                int s=0;
-                while(s<receivedBytes.length){
-                    if(receivedBytes[s]!=0) s++;
-                    else break;
-                }*/
-                
                 byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
                 byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBid.getLength()); //Msg igual
+                
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
-                String puzzleReceivedMsg = new String(msgEnc);
-                
+                String puzzleReceivedMsg = new String(msgEnc); 
                 JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
                 JSONArray dataPuzzle = puzzleMsg.getJSONArray("Data");
-                byte[] solution = gson.fromJson(dataPuzzle.toString(), byte[].class);
+                byte[] solution = gson.fromJson(dataPuzzle.toString(), byte[].class); 
                 
                 //Enviar resposta ao cliente
                 if(Arrays.equals(solution, puzzle)){
-                    System.out.println("ENVIADO");
                     sendMsg = "{ \"Type\":\"Puzzle\",\"Result\":\"SUCESS\"}";
                     sendObj = new JSONObject(sendMsg);
                     System.out.println(sendObj.toString());
                     messageClient(ClientIP,ClientPort,serverSocket,sendObj);
-                }
+                } 
                 
                 //Manda leilões ativos
                 byte[] receivebufferBidActive = new byte[32768];
                 DatagramPacket receivePacketBidActive = new DatagramPacket(receivebufferBidActive, receivebufferBidActive.length);
                 serverSocket.receive(receivePacketBidActive);
-                //String ReceivedMsg = new String(receivePacketBidActive.getData());
+                
                 //Decriptar
                 receivedBytes = receivePacketBidActive.getData();
-                /*Thread.sleep(1000);
-                //System.out.println("ativos"+Arrays.toString(receivedBytes));
-                s=0;
-                while(s<receivedBytes.length){
-                    if(receivedBytes[s]!=0) s++;
-                    else break;
-                }*/
-                
                 IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
                 msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBidActive.getLength()); //Msg igual
+                
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 String ReceivedMsg = new String(msgEnc);
-                
                 msg = new JSONObject(ReceivedMsg);
-                //System.out.println(msg.toString());
+                
                 //Listar todos os leilões ativos
                 retMsg="";
+                
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 int activeAuctionTotalBid = 0;
                 for(int i=0; i<AuctionList.size();i++){
@@ -483,7 +461,6 @@ public class AuctionRepository {
                         retMsg += ",\"AuctionName" + activeAuctionTotalBid + "\":\"" + auctionName + "\",\"AuctionID" + activeAuctionTotalBid + "\":" + auctionID + "";
                     }
                  }
-                
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotalBid + retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
@@ -492,42 +469,29 @@ public class AuctionRepository {
                 byte[] receivebufferBidFinal = new byte[32768];
                 DatagramPacket receivePacketBidFinal = new DatagramPacket(receivebufferBidFinal, receivebufferBidFinal.length);
                 serverSocket.receive(receivePacketBidFinal);
-                //ReceivedMsg = new String(receivePacketBidFinal.getData());
                 
                 //Decriptar
                 receivedBytes = receivePacketBidFinal.getData();
-                /*Thread.sleep(2000);
-                //System.out.println(Arrays.toString(receivedBytes));
-                //System.out.println(Arrays.toString(receivedBytes));
-                s=0;
-                while(s<receivedBytes.length){
-                    if(receivedBytes[s]!=0) s++;
-                    else break;
-                }*/
-                
                 IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
                 msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBidFinal.getLength()); //Msg igual
+                
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 ReceivedMsg = new String(msgEnc);
-                
-                msg = new JSONObject(ReceivedMsg);
-                //System.out.println(msg.toString());
-                
+                msg = new JSONObject(ReceivedMsg);                
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID"))
                     {
                         AuctionList.get(i).addBid(new Bid(msg.getDouble("Amount"),msg.getInt("ClientID")));
                     }
                 }
-                
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
-
                 
             case "end":
+                
                     serverSocket.close();
                     System.exit(1);
                     break;
@@ -546,7 +510,6 @@ public class AuctionRepository {
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
-
         sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         serverSocket.send(sendPacket);
@@ -565,7 +528,6 @@ public class AuctionRepository {
     private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
         byte[] sendbuffer  = new byte[1024];
         sendbuffer = msg.toString().getBytes();        
-        System.out.println(ClientPort);
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
     }
