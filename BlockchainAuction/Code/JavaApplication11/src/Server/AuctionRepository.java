@@ -1,15 +1,31 @@
 package Server;
 import Auction.*;
 import com.google.gson.Gson;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -19,13 +35,31 @@ import org.json.JSONObject;
  */
 public class AuctionRepository {
 
+    //Client Keys
+    private static final ArrayList<PublicKey> clientKeys = new ArrayList<>();
+    private static final ArrayList<Certificate> clientCert = new ArrayList<>();
+    private static final ArrayList<SecretKey> clientSecret = new ArrayList<>();
+    private static KeyPair kp;
+    
     private static int auctionID=0;
     public static void newAuctionID() {
         auctionID++;
     }
+    //Client ID
+    private static int clientID=0;
+    public static void newClientID() {
+         clientID++;
+    }
    
-    public static void main(String[] args) throws SocketException, IOException {
+    public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, GeneralSecurityException, InterruptedException {
         
+        //Cria par de chaves 
+        kp = SecurityRepository.generateKey();
+
+        //Criar certificado
+        X509Certificate cert = SecurityRepository.generateCert(kp,"CN=Server_Repository, L=Aveiro, C=PT", 100, "SHA1withRSA");
+        //SecurityManager.printCertificateSpecs(cert);
+     
         //All auctions
         ArrayList<Auction> AuctionList= new ArrayList<>();
 
@@ -39,19 +73,41 @@ public class AuctionRepository {
         while(true){
 
             //Receber informação por udp
-            byte[] receivebuffer = new byte[1024];
-            byte[] sendbuffer  = new byte[1024];
+            byte[] receivebuffer= new byte[1024];
+            byte[] sendbuffer;
             DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
             serverSocket.receive(recvdpkt);
             ClientIP = recvdpkt.getAddress();
             ClientPort = recvdpkt.getPort();
-
-            String ReceivedMsg = new String(recvdpkt.getData());
+            byte[] receivedBytes = recvdpkt.getData();
+            //Thread.sleep(2000);
+            /*int i=0;
+            while(i<receivedBytes.length){
+                if(receivedBytes[i]!=0) i++;
+                else break;
+            }*/
+            String ReceivedMsg = "";
+            //Thread.sleep(1000);
+            //System.out.println(Arrays.toString(receivedBytes));
+            if(!(clientSecret.isEmpty() || new String(receivedBytes).contains("Type"))){
+                byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                byte[] msg = Arrays.copyOfRange(receivedBytes, 16, recvdpkt.getLength()); //Msg igual
+                //Thread.sleep(2000);
+                //System.out.println(Arrays.toString(IV));
+                //System.out.println(Arrays.toString(msg));
+                //Decriptar mensagem
+                msg = SecurityRepository.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
+                ReceivedMsg = new String(msg);
+          
+            }else{
+              ReceivedMsg = new String(receivedBytes);
+              System.out.println(ReceivedMsg);
+            }
+          
             JSONObject recMsg = new JSONObject(ReceivedMsg);
-            System.out.println(recMsg.toString());
             //System.out.println("\nManager : "+ ReceivedMsg);
 
-            ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort);
+            ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort,cert);
 
         }
     }
@@ -87,12 +143,84 @@ public class AuctionRepository {
      * @throws IOException 
      */
     
-    private static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort) throws IOException{
+    private static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, GeneralSecurityException, InterruptedException{
         String type = msg.getString(("Type"));
         String retMsg="";
+        Gson gson = new Gson();
         JSONObject retJSON;
         
         switch(type){
+            case "init":
+                    //Mandar certificado 
+                    messageClientCert(ClientIP, ClientPort,serverSocket,cert);
+                    
+                    //Receber certificado do cliente
+                    byte[] receivebuffer = new byte[32768];
+                    DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+                    serverSocket.receive(receivePacket);
+                    byte[] certificateBytes = receivePacket.getData();
+                    
+                    //Guardar certificado do cliente
+                    CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+                    X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
+                    clientCert.add(certificate);
+                    //System.out.println(certificate.toString());
+                    
+                    //Validar certificado
+                    try{
+                        certificate.checkValidity();
+                        clientKeys.add(certificate.getPublicKey());
+                        retMsg = "Valid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
+                        messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                        //System.out.println("Certificate valid");
+                    }catch(IOException | CertificateExpiredException | CertificateNotYetValidException | JSONException e){
+                        retMsg = "Invalid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
+                        messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                        //System.out.println("Certificate invalid");
+                    }
+                    
+                    //Receber chave simétrica
+                    byte[] receivebuffer2 = new byte[64000];
+                    DatagramPacket receivePacket2 = new DatagramPacket(receivebuffer2, receivebuffer.length);
+                    serverSocket.receive(receivePacket2);
+                    String SymReceivedMsg = new String(receivePacket2.getData());
+                    JSONObject symMsg = new JSONObject(SymReceivedMsg);
+                    JSONArray data = symMsg.getJSONArray("Sym");
+                    JSONArray data2 = symMsg.getJSONArray("Data");
+                    
+                    //Decifrar mensagem
+                    byte[] dataKey = gson.fromJson(data.toString(), byte[].class); //Hash
+                    byte[] dataHash = gson.fromJson(data2.toString(),byte[].class); //Chave
+                    byte[] symKey = SecurityRepository.decryptMsg(clientKeys.get(0),dataKey);
+                    
+                    //Verificar assinatura
+                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                    byte[] digest = messageDigest.digest(dataHash);
+                    
+                    //Obter chave simétrica
+                    //SecretKey symetricKey = new SecretKey()
+                    SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
+
+                    //System.out.println("key inside"+Arrays.toString(symetricKey.getEncoded()));
+                    
+                    if(Arrays.equals(digest, symKey)){
+                        clientSecret.add(symetricKey);
+                        //System.out.println(Arrays.toString(symetricKey.toString().getBytes()));
+                        //System.out.println("Assinatura validada !");
+                    }else{
+                        System.out.println("Assinatura inválida !");
+                        //System.out.println(Arrays.toString(digest));
+                        //System.out.println(Arrays.toString(symKey));
+                    }
+                    
+                    break;
+                    
+            case "clientID":
+                    newClientID();
+                    break;
+                    
             case "cta": 
                 //leilão inglês ou leilão cego
                 boolean englishAuction=true;
@@ -277,11 +405,10 @@ public class AuctionRepository {
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Ainda não foi implementado\"}");
                     messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                     break;
-                
+                             
             case "bid":              
                 //Enviar cryptopuzzle
                 byte[] puzzle = SecurityRepository.puzzleGenerate();
-                Gson gson = new Gson();   
                 String json = ""+gson.toJson(puzzle);
                 String sendMsg = "{ \"Type\":\"Puzzle\",\"Data\":"+json+"}";
                 JSONObject sendObj = new JSONObject(sendMsg); 
@@ -291,10 +418,26 @@ public class AuctionRepository {
                 byte[] receivebufferBid = new byte[32768];
                 DatagramPacket receivePacketBid = new DatagramPacket(receivebufferBid, receivebufferBid.length);
                 serverSocket.receive(receivePacketBid);
-                String puzzleReceivedMsg = new String(receivePacketBid.getData());
+                //String puzzleReceivedMsg = new String(receivePacketBid.getData());
+                
+                //Decriptar
+                byte[] receivedBytes = receivePacketBid.getData();
+                /*Thread.sleep(2000);
+                int s=0;
+                while(s<receivedBytes.length){
+                    if(receivedBytes[s]!=0) s++;
+                    else break;
+                }*/
+                
+                byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBid.getLength()); //Msg igual
+                //Decriptar mensagem
+                msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
+                String puzzleReceivedMsg = new String(msgEnc);
+                
                 JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
-                JSONArray data = puzzleMsg.getJSONArray("Data");
-                byte[] solution = gson.fromJson(data.toString(), byte[].class);
+                JSONArray dataPuzzle = puzzleMsg.getJSONArray("Data");
+                byte[] solution = gson.fromJson(dataPuzzle.toString(), byte[].class);
                 
                 //Enviar resposta ao cliente
                 if(Arrays.equals(solution, puzzle)){
@@ -305,12 +448,71 @@ public class AuctionRepository {
                     messageClient(ClientIP,ClientPort,serverSocket,sendObj);
                 }
                 
+                //Manda leilões ativos
+                byte[] receivebufferBidActive = new byte[32768];
+                DatagramPacket receivePacketBidActive = new DatagramPacket(receivebufferBidActive, receivebufferBidActive.length);
+                serverSocket.receive(receivePacketBidActive);
+                //String ReceivedMsg = new String(receivePacketBidActive.getData());
+                //Decriptar
+                receivedBytes = receivePacketBidActive.getData();
+                /*Thread.sleep(1000);
+                //System.out.println("ativos"+Arrays.toString(receivedBytes));
+                s=0;
+                while(s<receivedBytes.length){
+                    if(receivedBytes[s]!=0) s++;
+                    else break;
+                }*/
+                
+                IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBidActive.getLength()); //Msg igual
+                //Decriptar mensagem
+                msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
+                String ReceivedMsg = new String(msgEnc);
+                
+                msg = new JSONObject(ReceivedMsg);
+                //System.out.println(msg.toString());
+                //Listar todos os leilões ativos
+                retMsg="";
+                //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
+                int activeAuctionTotalBid = 0;
+                for(int i=0; i<AuctionList.size();i++){
+                    if(AuctionList.get(i).isAuctionFinished()==false){
+                        activeAuctionTotalBid++;
+                        String auctionName = AuctionList.get(i).getAuctionName();
+                        int auctionID = AuctionList.get(i).getAuctionID();
+                        retMsg += ",\"AuctionName" + activeAuctionTotalBid + "\":\"" + auctionName + "\",\"AuctionID" + activeAuctionTotalBid + "\":" + auctionID + "";
+                    }
+                 }
+                
+                //Devolver mensagem
+                retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotalBid + retMsg + "}");
+                messageClient(ClientIP,ClientPort,serverSocket,retJSON);
+                
                 //Esperar bid
                 byte[] receivebufferBidFinal = new byte[32768];
                 DatagramPacket receivePacketBidFinal = new DatagramPacket(receivebufferBidFinal, receivebufferBidFinal.length);
                 serverSocket.receive(receivePacketBidFinal);
-                String ReceivedMsg = new String(receivePacketBidFinal.getData());
+                //ReceivedMsg = new String(receivePacketBidFinal.getData());
+                
+                //Decriptar
+                receivedBytes = receivePacketBidFinal.getData();
+                /*Thread.sleep(2000);
+                //System.out.println(Arrays.toString(receivedBytes));
+                //System.out.println(Arrays.toString(receivedBytes));
+                s=0;
+                while(s<receivedBytes.length){
+                    if(receivedBytes[s]!=0) s++;
+                    else break;
+                }*/
+                
+                IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBidFinal.getLength()); //Msg igual
+                //Decriptar mensagem
+                msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
+                ReceivedMsg = new String(msgEnc);
+                
                 msg = new JSONObject(ReceivedMsg);
+                //System.out.println(msg.toString());
                 
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID"))
@@ -364,6 +566,24 @@ public class AuctionRepository {
         byte[] sendbuffer  = new byte[1024];
         sendbuffer = msg.toString().getBytes();        
         System.out.println(ClientPort);
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
+        serverSocket.send(sendPacket);
+    }
+    
+    /**
+     * Função que manda mensagem para o cliente com o certificado do servidor.
+     * 
+     * @param ClientIP IP do cliente
+     * @param ClientPort Número da porta do cliente
+     * @param serverSocket Socket do Auction Manager
+     * @param cert Certificado do servidor
+     * @throws UnknownHostException
+     * @throws IOException 
+     * @throws java.security.cert.CertificateEncodingException 
+     */
+    private static void messageClientCert(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
+        byte[] sendbuffer;
+        sendbuffer = cert.getEncoded();
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
     }

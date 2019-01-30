@@ -24,7 +24,9 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import org.json.*;
@@ -51,9 +53,14 @@ public class Client {
     
     private static boolean bid = false;
     private static boolean simetricKeyGen = false;
-    private static SecretKey secretKey = null;
+    //Manager
+    private static SecretKey secretKeyManager = null;
     private static PublicKey managerKey = null;
     private static Certificate managerCert = null;
+    //Repository
+    private static SecretKey secretKeyRepository = null;
+    private static PublicKey repositoryKey = null;
+    private static Certificate repositoryCert = null;
 
     
     public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, GeneralSecurityException {
@@ -65,7 +72,8 @@ public class Client {
         InetAddress IP = InetAddress.getByName("127.0.0.1");
         clientSocket = new DatagramSocket();
         byte[] sendbuffer = new byte[1024];
-        initCommunication(clientSocket,managerKey);
+        initCommunicationManager(clientSocket,managerKey);
+        initCommunicationRepository(clientSocket,repositoryKey);
         
         int clientID = 0;
         
@@ -435,7 +443,7 @@ public class Client {
         
     }
     
-    private static boolean getActiveAuctionsByClient(int clientID) throws IOException{
+    private static boolean getActiveAuctionsByClient(int clientID) throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lgaClient";
         sendMsg = "{ \"Type\":"+messageType+",\"ClientID\":" + clientID + "}";
 
@@ -462,7 +470,7 @@ public class Client {
         }
     }
     
-    private static boolean getActiveAuctions() throws IOException{
+    private static boolean getActiveAuctions() throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lga";
         sendMsg = "{ \"Type\":"+messageType+"}";
 
@@ -489,7 +497,7 @@ public class Client {
         }
     }
     
-    private static boolean getInactiveAuctions() throws IOException{
+    private static boolean getInactiveAuctions() throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lta";
         sendMsg = "{ \"Type\":"+messageType+"}";
 
@@ -553,14 +561,28 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    private static JSONObject messageRepository(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+    private static JSONObject messageRepository(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException, GeneralSecurityException{
         sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer  = new byte[1024];
-
-        sendbuffer = msg.toString().getBytes();        
-        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+        byte[] sendbuffer=new byte[1024];
+        
+        //Gerar IV
+        Gson gson = new Gson();
+        byte[] initializationVector = new byte[16];
+        SecureRandom secRan = new SecureRandom(); 
+        secRan.nextBytes(initializationVector);
+        //System.out.println(Arrays.toString(initializationVector));
+        //Encriptrar
+        sendbuffer = msg.getBytes();
+        sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyRepository,initializationVector);
+        
+        byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
+        System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
+        System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
+              
+        System.out.println(Arrays.toString(sendbufferIV));
+        DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
         if(msg.equals(("end"))){
@@ -584,11 +606,9 @@ public class Client {
      * @throws java.security.KeyStoreException
      * @throws IOException
      */
-    private static void initCommunication(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
+    private static void initCommunicationManager(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
         String sendMsg = "{ \"Type\":init}";
         JSONObject sendObj = new JSONObject(sendMsg);
-
-        
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
@@ -596,7 +616,7 @@ public class Client {
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
-        
+        //Manager 
         byte[] receivebuffer = new byte[32768];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
@@ -636,11 +656,11 @@ public class Client {
             try {
                 KeyGenerator kgen = KeyGenerator.getInstance("AES");
                 kgen.init(128, new SecureRandom());
-                secretKey = kgen.generateKey();
+                secretKeyManager = kgen.generateKey();
    
                 //Assinar chave
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-                byte[] digest = messageDigest.digest(secretKey.getEncoded());
+                byte[] digest = messageDigest.digest(secretKeyManager.getEncoded());
                 
                 //Encriptar
                 byte[] symKey = SecurityClient.encryptMsg(digest,SecurityClient.getPrivateKey());
@@ -649,7 +669,7 @@ public class Client {
                 //Envia chave simetrica
                 Gson gson = new Gson();
                 String json = ""+gson.toJson(symKey);
-                String json2 = ""+gson.toJson(secretKey.getEncoded());
+                String json2 = ""+gson.toJson(secretKeyManager.getEncoded());
                 sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
                 sendObj = new JSONObject(sendMsg);                
                 
@@ -660,6 +680,95 @@ public class Client {
         sendbuffer = sendObj.toString().getBytes();        
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
+    }
+    
+        /**
+     * Função que inicia a comunicação.Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
+     * 
+     * @param clientSocket Socket do Cliente
+     * @param repositoryKey Chave publica do repositorio
+     * @throws UnknownHostException
+     * @throws java.security.cert.CertificateException
+     * @throws java.security.KeyStoreException
+     * @throws IOException
+     */
+    private static void initCommunicationRepository(DatagramSocket clientSocket, PublicKey repositoryKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
+        String sendMsg = "{ \"Type\":init}";
+        JSONObject sendObj = new JSONObject(sendMsg);
+        InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
+        int ServerPort = 9876;
+        byte[] sendbuffer  = new byte[1024];
+        sendbuffer = sendObj.toString().getBytes();        
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
+        
+        //Repositorio
+        byte[] receivebuffer = new byte[32768];
+        DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+        clientSocket.receive(receivePacket);
+        
+        byte[] certificateBytes = receivePacket.getData();
+        CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+        X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
+        repositoryCert = certificate;
+        
+        try{
+            certificate.checkValidity();
+            repositoryKey = certificate.getPublicKey();
+            //System.out.println(SecurityClient.getCCCertificate().toString());
+            messageRepositoryCert(clientSocket, SecurityClient.getCCCertificate());
+            //System.out.println("Certificate valid");
+        }catch(CertificateExpiredException | CertificateNotYetValidException e){
+            System.out.println("Certificate not valid ");
+        }
+        //System.out.println(certificate.toString());
+        
+        clientSocket.receive(receivePacket);
+        String ReceivedMsg = new String(receivePacket.getData());
+        JSONObject recMsg = new JSONObject(ReceivedMsg);
+        System.out.println("\nServer : " + recMsg.toString());
+        String type = recMsg.getString(("Type"));
+        if(type.equals("cert")){
+           String msg = recMsg.getString(("Message"));
+           if(msg.equals("Valid certificate")){
+               simetricKeyGen = true;
+               //System.out.println("Ready to generate Symetric Key.");
+           }
+        }
+        
+        //Ver algoritmos a usar
+        //Gerar chave simétrica
+        if(simetricKeyGen){
+            try {
+                //KeyGenerator kgen = KeyGenerator.getInstance("AES");
+                //kgen.init(128, new SecureRandom());
+                secretKeyRepository = KeyGenerator.getInstance("AES").generateKey();
+                //secretKeyRepository = kgen.generateKey();  
+                
+                //Assinar chave
+                MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                byte[] digest = messageDigest.digest(secretKeyRepository.getEncoded());
+                
+                //Encriptar
+                byte[] symKey = SecurityClient.encryptMsg(digest,SecurityClient.getPrivateKey());
+                
+                //Envia chave simetrica
+                Gson gson = new Gson();
+                String json = ""+gson.toJson(symKey);
+                String json2 = ""+gson.toJson(secretKeyRepository.getEncoded());
+                sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
+                sendObj = new JSONObject(sendMsg);   
+            } catch (NoSuchAlgorithmException ex) {
+                System.out.println("Impossible to generate Symetric Key.");
+            }
+        }
+        sendbuffer = sendObj.toString().getBytes();        
+        sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
+        
+        System.out.print("INIT-END");
+        
+        
     }
     
     /**
@@ -674,6 +783,25 @@ public class Client {
     private static void messageManagerCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
+        byte[] sendbuffer;
+        sendbuffer = cert.getEncoded();
+        
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
+    }
+    
+    /**
+     * Envia o certificado do cliente para o Servidor Repositorio
+     * 
+     * @param clientSocket Socket do Cliente
+     * @param cert Certificado do CC
+     * @throws java.net.UnknownHostException
+     * @throws IOException
+     * @throws java.security.cert.CertificateEncodingException
+     */
+    private static void messageRepositoryCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
+        InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
+        int ServerPort = 9876;
         byte[] sendbuffer;
         sendbuffer = cert.getEncoded();
         

@@ -74,8 +74,24 @@ public class AuctionManager {
           byte[] receivebuffer = new byte[1024];
           byte[] sendbuffer  = new byte[1024];
           DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
-          serverSocket.receive(recvdpkt);    
-          String ReceivedMsg = new String(recvdpkt.getData());
+          serverSocket.receive(recvdpkt); 
+          String ReceivedMsg = "";
+          ReceivedMsg = new String(recvdpkt.getData());
+          /*if(!clientSecret.isEmpty()){
+            //Obter IV
+            byte[] receivedBytes = recvdpkt.getData();
+            byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16);
+            byte[] msg = Arrays.copyOfRange(receivedBytes, 16, receivedBytes.length);
+
+            //Decriptar mensagem
+            msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID), IV);
+            ReceivedMsg = new String(msg);
+            System.out.println(ReceivedMsg+"FDS QUE GAJO INTELIGENTE");
+            System.exit(1);
+          
+           }else{
+             ReceivedMsg = new String(recvdpkt.getData());
+           }*/
           
           //Obter endereço do client
           if((!recvdpkt.getAddress().toString().equals("127.0.0.1")) && (recvdpkt.getPort()!=9876 )){
@@ -194,11 +210,13 @@ public class AuctionManager {
                         //System.out.println(Arrays.toString(digest));
                         //System.out.println(Arrays.toString(symKey));
                     }
+                    
                     break;
         
             case "clientID":
                     newClientID();
                     retJSON = new JSONObject("{ \"Type\":\"clientID\",\"clientID\":"+clientID+"}");
+                    messageRepository(serverSocket,msg);
                     messageClient(ClientIP, ClientPort,serverSocket, retJSON);
                     break;
             case "cta":

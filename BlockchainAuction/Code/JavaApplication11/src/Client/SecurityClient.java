@@ -36,6 +36,8 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 
 public class SecurityClient {
     
@@ -199,5 +201,46 @@ public class SecurityClient {
             //System.out.println(Arrays.toString(solution));
         }
         return solution;
+    }
+    
+    /**
+     * Encripta uma mensagem, usando chaves simetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keySym chave simetricas
+     * @param initializationVector array para vertor de inicialização
+     * @return mensagem encriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] encryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
+        cipher.init(Cipher.ENCRYPT_MODE, keySym,ivSpec);
+        byte[] output = cipher.doFinal(input);
+        return output;
+    }
+    
+    /**
+     * Decripta uma mensagem, usando chaves simetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keySym chave simetricas
+     * @param initializationVector vetor de inicialização
+     * @return mensagem decriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] decryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        
+        //Definir IV
+         GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
+        
+        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);
+        
+        byte[] output = cipher.doFinal(input);
+        return output;
+
     }
 }

@@ -18,6 +18,8 @@ import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateSerialNumber;
@@ -131,6 +133,48 @@ public class SecurityManager {
         cipher.init(Cipher.DECRYPT_MODE, key);
         byte[] output = cipher.doFinal(input);
         return output;
+    }
+    
+     /**
+     * Encripta uma mensagem, usando chaves simetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keySym chave simetricas
+     * @param initializationVector array para vertor de inicialização
+     * @return mensagem encriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] encryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
+    
+        cipher.init(Cipher.ENCRYPT_MODE, keySym,ivSpec);
+        byte[] output = cipher.doFinal(input);
+        return output;
+    }
+    
+    /**
+     * Decripta uma mensagem, usando chaves simetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keySym chave simetricas
+     * @param initializationVector vetor de inicialização
+     * @return mensagem decriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] decryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        
+        //Definir IV
+         GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
+        
+        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);
+        
+        byte[] output = cipher.doFinal(input);
+        return output;
+
     }
 
 }
