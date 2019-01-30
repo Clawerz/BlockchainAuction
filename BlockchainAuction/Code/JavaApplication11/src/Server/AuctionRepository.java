@@ -26,34 +26,34 @@ public class AuctionRepository {
    
     public static void main(String[] args) throws SocketException, IOException {
         
-      //All auctions
-      ArrayList<Auction> AuctionList= new ArrayList<>();
-      
-      DatagramSocket serverSocket = new DatagramSocket(9876);
-         
-      //Informação relativa ao cliente
-      boolean client = false;
-      InetAddress ClientIP=null;
-      int ClientPort=0;
-      
-      while(true){
-            
-          //Receber informação por udp
-          byte[] receivebuffer = new byte[1024];
-          byte[] sendbuffer  = new byte[1024];
-          DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
-          serverSocket.receive(recvdpkt);
-          ClientIP = recvdpkt.getAddress();
-          ClientPort = recvdpkt.getPort();
-          
-          String ReceivedMsg = new String(recvdpkt.getData());
-          JSONObject recMsg = new JSONObject(ReceivedMsg);
-          System.out.println(recMsg.toString());
-          //System.out.println("\nManager : "+ ReceivedMsg);
-          
-          ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort);
+        //All auctions
+        ArrayList<Auction> AuctionList= new ArrayList<>();
 
-      }
+        DatagramSocket serverSocket = new DatagramSocket(9876);
+
+        //Informação relativa ao cliente
+        boolean client = false;
+        InetAddress ClientIP=null;
+        int ClientPort=0;
+
+        while(true){
+
+            //Receber informação por udp
+            byte[] receivebuffer = new byte[1024];
+            byte[] sendbuffer  = new byte[1024];
+            DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
+            serverSocket.receive(recvdpkt);
+            ClientIP = recvdpkt.getAddress();
+            ClientPort = recvdpkt.getPort();
+
+            String ReceivedMsg = new String(recvdpkt.getData());
+            JSONObject recMsg = new JSONObject(ReceivedMsg);
+            System.out.println(recMsg.toString());
+            //System.out.println("\nManager : "+ ReceivedMsg);
+
+            ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort);
+
+        }
     }
     
     /**
@@ -101,7 +101,7 @@ public class AuctionRepository {
                     englishAuction = false;
                 }
 
-                Auction a = new Auction(msg.getInt("ClientID"), msg.getString("Name"), auctionID, msg.getInt("Time"), englishAuction);
+                Auction a = new Auction(msg.getInt("clientID"), msg.getString("Name"), auctionID, msg.getInt("Time"), englishAuction);
                 AuctionList.add(a);
                 
                 //Devolver mensagem
@@ -115,13 +115,14 @@ public class AuctionRepository {
                 double value = 0;
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar mudar o estado desse leilão
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName"))) {
+                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")) {
                         if(AuctionList.get(i).getCreatorID() == msg.getInt("ClientID")){
                             for(int j=0; j<AuctionList.get(i).getBids().size();j++){
                                 if(AuctionList.get(i).getBids().get(j).getValue()>value){
                                     value = AuctionList.get(i).getBids().get(j).getValue();
                                     AuctionList.get(i).setWinnerBid(AuctionList.get(i).getBids().get(j));
                                     AuctionList.get(i).setBuyerID(AuctionList.get(i).getBids().get(j).getClientID());
+
                                 }
                             }
                             AuctionList.get(i).setAuctionFinished(true);
@@ -131,17 +132,17 @@ public class AuctionRepository {
                     }
                  }
                 
-                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\"}");
+                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+found+"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
             case "gba" : 
-                //Listar todos os bids de um leilão
+                //Listar todos os bids de um client
                 retMsg="";
                 String arrayBidsValues = "";
                 //Percorrer todos os leilões, os que tiverem ativos são adicionados á string
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName"))){
+                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")){
                         /*for(int j=0; j<AuctionList.get(i).getBids().size(); j++){
                             retMsg+= AuctionList.get(i).getBids().get(j).getValue()+" ";
                         }*/
@@ -192,16 +193,14 @@ public class AuctionRepository {
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).isAuctionFinished()==false){
                         activeAuctionTotal++;
-                        if(activeAuctionTotal>1) retMsg+="";
-                        else retMsg = "\"AuctionName\":";
                         String auctionName = AuctionList.get(i).getAuctionName();
-                        retMsg += auctionName+" ";
+                        int auctionID = AuctionList.get(i).getAuctionID();
+                        retMsg += ",\"AuctionName" + activeAuctionTotal + "\":\"" + auctionName + "\",\"AuctionID" + activeAuctionTotal + "\":" + auctionID + "";
                     }
                  }
                 
-                //Devolver mensagem7
-                System.out.println(retMsg);
-                retJSON = new JSONObject("{ \"Type\":\"Leiloes\",\"Message\":\"Operation completed with sucess!\"," + retMsg + "}");
+                //Devolver mensagem
+                retJSON = new JSONObject("{ \"Type\":\"ActiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"ActiveAuctionsTotal\":" + activeAuctionTotal + retMsg + "}");
                 
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
@@ -215,10 +214,9 @@ public class AuctionRepository {
                     if(AuctionList.get(i).getCreatorID() == msg.getInt("ClientID")){
                         if(AuctionList.get(i).isAuctionFinished()==false){
                             activeAuctionTotal++;
-                            if(activeAuctionTotal>1) retMsg+="";
-                            else retMsg = "\"AuctionName\":";
                             String auctionName = AuctionList.get(i).getAuctionName();
-                            retMsg += auctionName + " ";
+                            int auctionID = AuctionList.get(i).getAuctionID();
+                            retMsg += ",\"AuctionName" + activeAuctionTotal + "\":\"" + auctionName + "\",\"AuctionID" + activeAuctionTotal + "\":" + auctionID + "";
                         }
                     }
                  }
@@ -237,15 +235,14 @@ public class AuctionRepository {
                 for(int i=0; i<AuctionList.size();i++){
                     if(AuctionList.get(i).isAuctionFinished()==true){
                         inactiveAuctionTotal++;
-                        if(inactiveAuctionTotal>1) retMsg+="";
-                        else retMsg = "\"AuctionName\":";
                         String auctionName = AuctionList.get(i).getAuctionName();
-                        retMsg += auctionName + " ";
+                        int auctionID = AuctionList.get(i).getAuctionID();
+                        retMsg += ",\"AuctionName" + inactiveAuctionTotal + "\":\"" + auctionName + "\",\"AuctionID" + inactiveAuctionTotal + "\":" + auctionID + "";
                     }
                  }
               
                 //Devolver mensagem
-                retJSON = new JSONObject("{ \"Type\":\"Leiloes\",\"Message\":\"Operation completed with sucess!\","+ retMsg + "}");
+                retJSON = new JSONObject("{ \"Type\":\"InactiveAuctions\",\"Message\":\"Operation completed with sucess!\",\"InactiveAuctionsTotal\":"+inactiveAuctionTotal+ retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
@@ -256,8 +253,8 @@ public class AuctionRepository {
                 found = false;
                 //Percorrer todos os leilões procurar pelo ID que foi fornecido na mensagem, quando encontrar obter toda a informação sobre o leilão
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName"))){
-                        if(AuctionList.get(i).getBuyerID() != -1){
+                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")){
+                        if(AuctionList.get(i).getBuyerID() != 0){
                             retMsg= ",\"Bought\":\"true\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID() + ",\"BuyerID\":" + AuctionList.get(i).getBuyerID() + ",\"Value\":" + AuctionList.get(i).getWinnerBid().getValue();
                         }else{
                             retMsg= ",\"Bought\":\"false\"" + ",\"AuctionName\":" + AuctionList.get(i).getAuctionName() + ",\"AuctionID\":" + AuctionList.get(i).getAuctionID();
@@ -316,11 +313,11 @@ public class AuctionRepository {
                 msg = new JSONObject(ReceivedMsg);
                 
                 for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionName().equals(msg.getString("AuctionName")))
+                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID"))
                     {
                         AuctionList.get(i).addBid(new Bid(msg.getDouble("Amount"),msg.getInt("ClientID")));
                     }
-                 }
+                }
                 
                 //Devolver mensagem
                 retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");

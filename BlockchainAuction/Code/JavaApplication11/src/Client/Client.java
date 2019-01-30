@@ -37,16 +37,24 @@ import org.json.*;
  * 
  */
 public class Client {
-    private static int clientID=0;
+    
+    private static String type = "";
+    private static String messageType = "";
+    private static String sendMsg = "";
+    private static JSONObject sendObj=null;
+    private static DatagramSocket clientSocket;
+    private static DatagramPacket receivePacket;
+    private static byte[] receivebuffer = new byte[1024];
+    private static String serverData;
+    private static JSONObject rec;
+    
+    
     private static boolean bid = false;
     private static boolean simetricKeyGen = false;
     private static SecretKey secretKey = null;
     private static PublicKey managerKey = null;
     private static Certificate managerCert = null;
 
-    private Client(int clientID) {
-        clientID++;
-    }
     
     public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, GeneralSecurityException {
         
@@ -55,30 +63,35 @@ public class Client {
         boolean exit = false;
         BufferedReader br =new BufferedReader(new InputStreamReader(System.in));
         InetAddress IP = InetAddress.getByName("127.0.0.1");
-        DatagramSocket clientSocket = new DatagramSocket();
+        clientSocket = new DatagramSocket();
+        byte[] sendbuffer = new byte[1024];
         initCommunication(clientSocket,managerKey);
+        
+        int clientID = 0;
+        
+        //Convert to json, cuidado com a maneria como se constroio a mesnagem
+        sendMsg = "{ \"Type\":\"clientID\"}";
+        
+        rec = messageManager(clientSocket,sendMsg);
+                        
+        for(int i=1; i < rec.names().length();i++){
+            List tmp = rec.names().toList();
+            clientID = rec.getInt("clientID");
+            System.out.print("\nO seu ID é " + clientID);
+        }
         
         while(!exit)
         {
-            byte[] sendbuffer = new byte[1024];
-            byte[] receivebuffer = new byte[1024];
-            
-            String messageType = "";
             String auctionName = "";
-            String auctionTime = "";
-            String auctionType = "";
-            String userID = "";
-            double amount = 0;
             int auctionID = 0;
-            
-            String sendMsg = "";
-            JSONObject sendObj=null;
+            int userID = 0;
+            double amount = 0;
             
             System.out.print("\n\nEscolha uma opção");
             System.out.print("\n1-Criar leilão");
             System.out.print("\n2-Terminar leilão");
             System.out.print("\n3-Ver leilões ativos");
-            System.out.print("\n4-Ver leilões inativos");
+            System.out.print("\n4-Ver leilões concluídos");
             System.out.print("\n5-Ver licitações de um leilão");
             System.out.print("\n6-Ver licitações feitas por um cliente");
             System.out.print("\n7-Ver resultado de um leilão");
@@ -91,129 +104,316 @@ public class Client {
             switch (option){
                     case "1":
                         messageType = "cta";
-                        System.out.print("\nNome: ");
-                        auctionName = br.readLine();
-                        System.out.print("\nDuração(minutos): ");
-                        auctionTime = br.readLine();
-                        System.out.print("\nTipo");
-                        System.out.print("\n1-Leilão Inglês");
-                        System.out.print("\n2-Leilão Cego");
-                        System.out.print("\nOpção: ");
-                        String optionType = br.readLine();
+                        boolean firstTime = true;
+                        while(auctionName.equals("")){
+                            if(!firstTime){
+                                System.out.print("\nERRO! O nome não pode estar vazio!");
+                            }
+                            System.out.print("\nNome: ");
+                            auctionName = br.readLine();
+                            firstTime = false;
+                        }
+                        int auctionTime = 0;
+                        while(auctionTime == 0){
+                            System.out.print("\nDuração(minutos): ");
+                            try{
+                                auctionTime = Integer.parseInt(br.readLine());
+                            }catch(NumberFormatException e){
+                                System.out.print("\nERRO! Insira um número!");
+                            }
+                        }
                         
-                        switch (optionType){
-                            case "1":
-                                auctionType = "english";
-                                break;
-                            case "2":
-                                auctionType = "blind";
-                                break;
+                        String auctionType = "";
+                        int optionType = 0;
+                        while(auctionType.equals("")){
+                            System.out.print("\nTipo");
+                            System.out.print("\n1-Leilão Inglês");
+                            System.out.print("\n2-Leilão Cego");
+                            System.out.print("\nOpção: ");
+                            try{
+                                optionType = Integer.parseInt(br.readLine());
+                            }catch(NumberFormatException e){
+                                    System.out.print("\nERRO! Insira um número!");
+                            }
+                            switch (optionType){
+                                case 1:
+                                    auctionType = "english";
+                                    break;
+                                case 2:
+                                    auctionType = "blind";
+                                    break;
+                                default:
+                                    System.out.print("\nERRO! Opção inválida!");
+                                    break;
+                            }
                         }
                         //Convert to json, cuidado com a maneria como se constroio a mesnagem
-                        sendMsg = "{ \"Type\":"+messageType+",\"Name\":"+auctionName+ ",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+",\"ClientID\":"+clientID+"}";
-                        sendObj = new JSONObject(sendMsg);
+                        sendMsg = "{ \"Type\":"+messageType+",\"clientID\":"+clientID+",\"Name\":\""+auctionName+ "\",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
+                        
                         //System.out.println(obj.getString("Type"));
-                        messageManager(clientSocket,sendObj);
+                        rec = messageManager(clientSocket, sendMsg);
+                        
+                        type = rec.getString(("Type"));
+                        switch(type){
+                            case "SUCCESS":
+                                System.out.print("\nLeilão criado.");
+                                break;
+                            default:
+                                System.out.print("\nERRO!");
+                                break;
+                        }
                         break;
                         
                     case "2":
-                        messageType = "tta";
-                        System.out.print("\nNome: ");
-                        auctionName = br.readLine();
-                        sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionName\":"+auctionName+",\"ClientID\":"+clientID+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        boolean existAuctions = getActiveAuctionsByClient(clientID);
+                        
+                        if(existAuctions){
+                            messageType = "tta";
+                            auctionID = 0;
+                            while(auctionID == 0){
+                                System.out.print("\nInsira o ID do leilão desejado: ");
+                                try{
+                                    auctionID = Integer.parseInt(br.readLine());
+                                }catch(NumberFormatException e){
+                                    System.out.print("\nERRO! Insira um número!");
+                                }
+                            }
+                            sendMsg = "{ \"Type\":"+messageType + ",\"ClientID\":"+clientID + ",\"AuctionID\":"+auctionID+"}";
+                            
+                            rec = messageRepository(clientSocket,sendMsg);
+
+                            String type = rec.getString(("Type"));
+                            switch(type){
+                                case "SUCCESS":
+                                    if(rec.getBoolean("SUCCESS")){
+                                        System.out.print("\nLeilão terminado com sucesso.");
+                                    }
+                                    else{
+                                        System.out.print("\nERRO! Leilão não encontrado!");
+                                    }
+                                break;
+                            }
+                        }
                         break;
                         
                     case "3":
-                        messageType = "lga";
-                        sendMsg = "{ \"Type\":"+messageType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        getActiveAuctions();
                         break;
                         
                     case "4":
-                        messageType = "lta";
-                        sendMsg = "{ \"Type\":"+messageType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        getInactiveAuctions();
                         break;
                         
                     case "5":
-                        messageType = "gba";
-                        System.out.print("\nNome: ");
-                        auctionName = br.readLine();
-                        sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionName\":"+auctionName+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        existAuctions = false;
+                        int optionActiveInactive = 0;
+                        
+                        while(optionActiveInactive == 0){
+                            System.out.print("\nEscolha entre");
+                            System.out.print("\n1-Leilões ativos");
+                            System.out.print("\n2-Leilões inativos");
+                            System.out.print("\nOpção: ");
+                            try{
+                                optionActiveInactive = Integer.parseInt(br.readLine());
+                            }catch(NumberFormatException e){
+                                    System.out.print("\nERRO! Insira um número!");
+                            }
+                        }
+                        switch (optionActiveInactive){
+                            case 1:
+                                existAuctions = getActiveAuctions();
+                                break;
+                            case 2:
+                                existAuctions = getInactiveAuctions();
+                                break;
+                            default:
+                                System.out.print("\nERRO! Opção inválida! De volta ao menu inicial.");
+                                break;
+                        }
+                        if(existAuctions){
+                            auctionID = 0;
+                            while(auctionID == 0){
+                                System.out.print("\nInsira o ID do leilão desejado: ");
+                                try{
+                                    auctionID = Integer.parseInt(br.readLine());
+                                }catch(NumberFormatException e){
+                                        System.out.print("\nERRO! Insira um número!");
+                                }
+                            }
+                            messageType = "gba";
+                            sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";
+
+                            rec = messageRepository(clientSocket,sendMsg);
+
+                            type = rec.getString(("Type"));
+                            switch(type){
+                                case "Bids":
+                                    if(rec.getJSONArray("Bids").length() != 0){
+                                        for(int i=0; i < rec.getJSONArray("Bids").length();i++){
+                                            System.out.print("\nLicitação" + i + ": " + rec.getJSONArray("Bids").getDouble(i));
+                                        }
+                                    }else
+                                    {
+                                        System.out.print("\nNão foi feita nenhuma licitação.");
+                                    }
+                                break;
+                            }
+                        }
                         break;
                         
                     case "6":
                         messageType = "gbc";
-                        System.out.print("\nClient ID: ");
-                        userID = br.readLine();
+                        userID = 0;
+                        while(userID == 0){
+                            System.out.print("\nInsira o ID do utilizador: ");
+                            try{
+                                userID = Integer.parseInt(br.readLine());
+                            }catch(NumberFormatException e){
+                                System.out.print("\nERRO! Insira um número!");
+                            }
+                        }
                         sendMsg = "{ \"Type\":"+messageType+ ",\"ClientID\":"+userID+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+
+                        rec = messageRepository(clientSocket,sendMsg);
+                        
+                        type = rec.getString(("Type"));
+                        switch(type){
+                            case "Bids":
+                                if(rec.getJSONArray("Values").length() != 0){
+                                    for(int i=0; i < rec.getJSONArray("Values").length();i++){
+                                        System.out.print("\nLicitação" + i + ": " + rec.getJSONArray("Values").getDouble(i));
+                                    }
+                                }else
+                                {
+                                    System.out.print("\nEste utilizador não existe ou não fez nenhuma licitação.");
+                                }
+                            break;
+                        }
                         break;
                         
                     case "7":
-                        messageType = "coa";
-                        System.out.print("\nNome: ");
-                        auctionName = br.readLine();
-                        sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionName\":"+auctionName+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        existAuctions = getInactiveAuctions();
+                        
+                        if(existAuctions){
+                            auctionID = 0;
+                            while(auctionID == 0){
+                                System.out.print("\nInsira o ID do leilão desejado: ");
+                                try{
+                                    auctionID = Integer.parseInt(br.readLine());
+                                }catch(NumberFormatException e){
+                                    System.out.print("\nERRO! Insira um número!");
+                                }
+                            }
+                            messageType = "coa";
+                            sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";                            sendObj = new JSONObject(sendMsg);
+                            
+                            rec = messageRepository(clientSocket,sendMsg);
+
+                            type = rec.getString(("Type"));
+                            switch(type){
+                                case "AuctionOutcome":
+                                    if(!(rec.getInt("AuctionID") == 0)){
+                                        if(rec.getString("Bought").equals("true")){
+                                            System.out.print("\nNome do leilão: " + rec.getString("AuctionName"));
+                                            System.out.print("\nID do leilão: " + rec.getInt("AuctionID"));
+                                            System.out.print("\nID do Comprador: " + rec.getInt("BuyerID"));
+                                            System.out.print("\nValor: " + rec.getDouble("Value") + "€");
+                                        }else{
+                                            System.out.print("\nNome do leilão: " + rec.getString("AuctionName"));
+                                            System.out.print("\nID do leilão: " + rec.getInt("AuctionID"));
+                                            System.out.print("\nNinguém comprou.");
+                                        }
+                                    }else{
+                                        System.out.print("\nERRO! O leilão com ID " + auctionID + " não existe!");
+                                    }
+                                break;
+                            }
+                        }
                         break;
                         
                     case "8":
+                        //TODO: Não faz nada por agora, pois ainda não sabemos como validar recibos
                         messageType = "vlr";
                         sendMsg = "{ \"Type\":"+messageType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+
+                        rec = messageRepository(clientSocket,sendMsg);
+
+                        type = rec.getString(("Type"));
+                        switch(type){
+                            case "ret":
+                                for(int i=1; i < rec.names().length();i++){
+                                    List tmp = rec.names().toList();
+                                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                                }
+                            break;
+                        }
                         break;
                         
                     case "9":
                         messageType = "bid";
                         sendMsg = "{ \"Type\":"+messageType+"}";
-                        sendObj = new JSONObject(sendMsg);
-                        messageRepository(clientSocket,sendObj);
+                        
+                        rec = messageRepository(clientSocket,sendMsg);
                                     
                         //Obter puzzle
-                        byte[] receivebufferBid = new byte[32768];
-                        DatagramPacket receivePacketBid = new DatagramPacket(receivebufferBid, receivebufferBid.length);
-                        clientSocket.receive(receivePacketBid);
-                        String puzzleReceivedMsg = new String(receivePacketBid.getData());
-                        JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
                         Gson gson = new Gson();
-                        JSONArray data = puzzleMsg.getJSONArray("Data");
+                        JSONArray data = rec.getJSONArray("Data");
                         byte[] puzzle = gson.fromJson(data.toString(), byte[].class);
                         
                         //Resolver puzzle
                         byte[] solution = SecurityClient.puzzleSolve(puzzle); 
                         String json = ""+gson.toJson(solution);
                         String sendMsgRep = "{ \"Type\":\"Puzzle\",\"Data\":"+json+"}";
-                        JSONObject sendObjRep = new JSONObject(sendMsgRep); 
-                        messageRepository(clientSocket,sendObjRep);
+                        rec = messageRepository(clientSocket,sendMsgRep);
                         
                         //Obter resposta da solução
-                        byte[] receivebufferSol = new byte[32768];
-                        DatagramPacket receivePacketSol = new DatagramPacket(receivebufferSol, receivebufferSol.length);
-                        clientSocket.receive(receivePacketSol);
-                        String SolReceivedMsg = new String(receivePacketSol.getData());
-                        JSONObject solMsg = new JSONObject(SolReceivedMsg);
-                        String result = solMsg.getString("Result");
+                        String result = rec.getString("Result");
                         if(result.equals(("SUCESS"))) bid = true;
                         
                         if(bid){
-                            messageType = "bid";
-                            System.out.print("\nNome: ");
-                            auctionName = br.readLine();
-                            System.out.print("\nAmount: ");
-                            amount = Double.parseDouble(br.readLine());
-                            sendMsg = "{ \"Type\":"+messageType+",\"AuctionName\":"+auctionName+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
-                            sendObj = new JSONObject(sendMsg);
-                            messageRepository(clientSocket,sendObj);
+                            //TODO: Com leilões criados e ativos, se se puser um ID que não existe, o programa continua para a frente, não devia.
+                            existAuctions = getActiveAuctions();
+
+                            if(existAuctions){
+                                messageType = "bid";
+                                auctionID = 0;
+                                while(auctionID == 0){
+                                    System.out.print("\nInsira o ID do leilão desejado: ");
+                                    try{
+                                        auctionID = Integer.parseInt(br.readLine());
+                                    }catch(NumberFormatException e){
+                                        System.out.print("\nERRO! Insira um número!");
+                                    }
+                                }
+                                amount = 0.0;
+                                while(amount == 0.0){
+                                    System.out.print("\nValor(€): ");
+                                    try{
+                                        amount = Double.parseDouble(br.readLine());
+                                    }catch(NumberFormatException e){
+                                        System.out.print("\nERRO! Insira um número! (Usar \".\" em vez de \",\" para separar a parte inteira da parte decimal)");
+                                    }
+                                }
+                                sendMsg = "{ \"Type\":"+messageType+",\"AuctionID\":"+auctionID+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
+
+                                rec = messageRepository(clientSocket,sendMsg);
+
+                                type = rec.getString(("Type"));
+                                switch(type){
+                                    case "ret":
+                                        for(int i=1; i < rec.names().length();i++){
+                                            List tmp = rec.names().toList();
+                                            System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                                        }
+                                    break;
+                                    default:
+                                        for(int i=1; i < rec.names().length();i++){
+                                        List tmp = rec.names().toList();
+                                        System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
+                                        }
+                                        break;
+                                }
+                            }
                         }else{
                             System.out.println("ERROR : Solve the puzzle first");
                         }
@@ -221,31 +421,99 @@ public class Client {
                         
                         break;
                         
-                    default:
+                    case "0":
                         sendMsg = "exit";
                         exit = true;
-                        messageManager(clientSocket,sendObj);
+                        //messageManager(clientSocket,sendMsg);
                         break;
+                    default:
+                        System.out.print("\nERRO! Opção inválida!");
             }
-
-            DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
-            clientSocket.receive(receivePacket);
-            String serverData = new String(receivePacket.getData());
-            
-            JSONObject rec = new JSONObject(serverData);
-            for(int i=0; i < rec.names().length();i++){
-                List tmp = rec.names().toList();
-                try{
-                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
-                }catch(JSONException e){
-                    System.out.print("\nServer: " + rec.get(tmp.get(i).toString()));
-                }
-            }
-
         }
         
         clientSocket.close();
         
+    }
+    
+    private static boolean getActiveAuctionsByClient(int clientID) throws IOException{
+        messageType = "lgaClient";
+        sendMsg = "{ \"Type\":"+messageType+",\"ClientID\":" + clientID + "}";
+
+        rec = messageRepository(clientSocket,sendMsg);
+
+        type = rec.getString(("Type"));
+        switch(type){
+            case "ActiveAuctions":
+                int activeAuctionTotal = rec.getInt("ActiveAuctionsTotal");
+                if(activeAuctionTotal == 0){
+                    System.out.print("\nNão existem leilões ativos.");
+                    return false;
+                    }
+                else{
+                    System.out.print("\nLeilões ativos:");
+                    for(int i=1; i<=activeAuctionTotal; i++){
+                        System.out.print("\n" + rec.getInt("AuctionID" + i) + "-" + rec.getString("AuctionName" + i));
+                    }
+                    return true;
+                }
+            default:
+                System.out.print("\nERRO!");
+                return false;
+        }
+    }
+    
+    private static boolean getActiveAuctions() throws IOException{
+        messageType = "lga";
+        sendMsg = "{ \"Type\":"+messageType+"}";
+
+        rec = messageRepository(clientSocket,sendMsg);
+
+        type = rec.getString(("Type"));
+        switch(type){
+            case "ActiveAuctions":
+                int activeAuctionTotal = rec.getInt("ActiveAuctionsTotal");
+                if(activeAuctionTotal == 0){
+                    System.out.print("\nNão existem leilões ativos.");
+                    return false;
+                    }
+                else{
+                    System.out.print("\nLeilões ativos:");
+                    for(int i=1; i<=activeAuctionTotal; i++){
+                        System.out.print("\n" + rec.getInt("AuctionID" + i) + "-" + rec.getString("AuctionName" + i));
+                    }
+                    return true;
+                }
+            default:
+                System.out.print("\nERRO!");
+                return false;
+        }
+    }
+    
+    private static boolean getInactiveAuctions() throws IOException{
+        messageType = "lta";
+        sendMsg = "{ \"Type\":"+messageType+"}";
+
+        rec = messageRepository(clientSocket,sendMsg);
+
+        type = rec.getString(("Type"));
+        switch(type){
+            case "InactiveAuctions":
+                int inactiveAuctionTotal = rec.getInt("InactiveAuctionsTotal");
+                if(inactiveAuctionTotal == 0){
+                    System.out.print("\nNão existem leilões concluídos.");
+                    return false;
+                    }
+                else{
+                    System.out.print("\nLeilões concluídos:");
+                    for(int i=1; i<=inactiveAuctionTotal; i++){
+                        System.out.print("\n" + rec.getInt("AuctionID" + i) + "-" + rec.getString("AuctionName" + i));
+                    }
+                    return true;
+                }
+            default:
+                System.out.print("\nERRO!");
+                return false;
+        }
     }
     
      /**
@@ -256,7 +524,8 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    private static void messageManager(DatagramSocket clientSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static JSONObject messageManager(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+        sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
@@ -269,6 +538,11 @@ public class Client {
             clientSocket.close();
             System.exit(1);
         }
+        
+        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+        clientSocket.receive(receivePacket);
+        serverData = new String(receivePacket.getData());
+        return new JSONObject(serverData);
     }
     
     /**
@@ -279,10 +553,11 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    private static void messageRepository(DatagramSocket clientSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static JSONObject messageRepository(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+        sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer;
+        byte[] sendbuffer  = new byte[1024];
 
         sendbuffer = msg.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
@@ -292,6 +567,11 @@ public class Client {
             clientSocket.close();
             System.exit(1);
         }
+        
+        receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
+        clientSocket.receive(receivePacket);
+        serverData = new String(receivePacket.getData());
+        return new JSONObject(serverData);
     }
     
     /**
@@ -307,7 +587,15 @@ public class Client {
     private static void initCommunication(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
         String sendMsg = "{ \"Type\":init}";
         JSONObject sendObj = new JSONObject(sendMsg);
-        messageManager(clientSocket,sendObj);
+
+        
+        InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
+        int ServerPort = 9877;
+        byte[] sendbuffer  = new byte[1024];
+        sendbuffer = sendObj.toString().getBytes();        
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
+        
         
         byte[] receivebuffer = new byte[32768];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
@@ -369,7 +657,9 @@ public class Client {
                 System.out.println("Impossible to generate Symetric Key.");
             }
         }
-        messageManager(clientSocket,sendObj);
+        sendbuffer = sendObj.toString().getBytes();        
+        sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
     }
     
     /**

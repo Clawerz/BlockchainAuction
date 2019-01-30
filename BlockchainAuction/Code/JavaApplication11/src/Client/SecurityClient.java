@@ -97,23 +97,23 @@ public class SecurityClient {
 
      */
     static byte[] sign(byte[] dataBuffer) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
-       //Fazer assinatura de um objecto
-       Signature s = Signature.getInstance("SHA256withRSA");
-       //Os ALIAS podem ser o CITIZEN AUTHENTICATION CERTIFICATE ou CITIZEN SIGNATURE CERTIFICATE
-       s.initSign((PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null));
-       s.update(dataBuffer);
-       byte [] sign = s.sign();
-       System.out.println("Dados assinados.");
-       return sign;
+        //Fazer assinatura de um objecto
+        Signature s = Signature.getInstance("SHA256withRSA");
+        //Os ALIAS podem ser o CITIZEN AUTHENTICATION CERTIFICATE ou CITIZEN SIGNATURE CERTIFICATE
+        s.initSign((PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null));
+        s.update(dataBuffer);
+        byte [] sign = s.sign();
+        System.out.println("Dados assinados.");
+        return sign;
 
-       //Verificar assinatura
-       /*Signature s2 = Signature.getInstance("SHA256withRSA");
-       byte [] dataBuffer2 = "So_para_o_teste".getBytes();
-       s2.initVerify(ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE"));
-       s2.update(dataBuffer2);
-       if(s2.verify(sign)){
-           System.out.println("Assinatura verificada com sucesso!");
-       }*/
+        //Verificar assinatura
+        /*Signature s2 = Signature.getInstance("SHA256withRSA");
+        byte [] dataBuffer2 = "So_para_o_teste".getBytes();
+        s2.initVerify(ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE"));
+        s2.update(dataBuffer2);
+        if(s2.verify(sign)){
+            System.out.println("Assinatura verificada com sucesso!");
+        }*/
     }
     
     /**
@@ -128,27 +128,27 @@ public class SecurityClient {
      * @throws java.security.cert.CertificateException 
      */
     static void validCertChain() throws KeyStoreException, NoSuchAlgorithmException, CertPathBuilderException, InvalidAlgorithmParameterException, FileNotFoundException, IOException, CertificateException{
-       //Validar cadeia de certificados
-       File f = new File("CC_KS");
-       InputStream is = new FileInputStream(f);
-       KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-       String password = "password";
-       keystore.load(is, password.toCharArray());
-       
-       List<Certificate> trustedAnchors = new ArrayList();
-       List<Certificate> intermediateCertificates = new ArrayList();
-       
-       PublicKey certKey;
-       
+        //Validar cadeia de certificados
+        File f = new File("CC_KS");
+        InputStream is = new FileInputStream(f);
+        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+        String password = "password";
+        keystore.load(is, password.toCharArray());
+
+        List<Certificate> trustedAnchors = new ArrayList();
+        List<Certificate> intermediateCertificates = new ArrayList();
+
+        PublicKey certKey;
+
         Enumeration<String> enumeration = keystore.aliases();
         while(enumeration.hasMoreElements()) {
             String alias = enumeration.nextElement();
             //System.out.println("alias name: " + alias);
-            
+
             //Distinguir os certificados
             Certificate cert = keystore.getCertificate(alias);
             certKey = cert.getPublicKey();
-            
+
             //Separar os certificados
             try{
                 cert.verify(certKey);
@@ -156,17 +156,17 @@ public class SecurityClient {
             }catch(InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException | CertificateException e){
                 intermediateCertificates.add(cert);
             }
-            
+
             X509CertSelector selector = new X509CertSelector();
             selector.setCertificate((X509Certificate) cert);
-            
+
             PKIXBuilderParameters pkixParams = new PKIXBuilderParameters( (KeyStore) trustedAnchors, selector );
             pkixParams.setRevocationEnabled(false); // No CRL checking
             pkixParams.addCertStore((CertStore) intermediateCertificates);
             CertPathBuilder builder = CertPathBuilder.getInstance( "PKIX" );
             PKIXCertPathBuilderResult path = (PKIXCertPathBuilderResult) builder.build( pkixParams );
         }
-        
+
         CertPathValidator cpv = CertPathValidator.getInstance( "PKIX" );
     }
     

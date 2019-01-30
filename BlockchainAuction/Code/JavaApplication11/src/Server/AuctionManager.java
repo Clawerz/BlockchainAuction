@@ -46,6 +46,12 @@ public class AuctionManager {
     private static final ArrayList<SecretKey> clientSecret = new ArrayList<>();
     private static KeyPair kp;
    
+    //Client ID
+    private static int clientID=0;
+    public static void newClientID() {
+         clientID++;
+    }
+    
     public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException, SignatureException, InvalidKeyException, GeneralSecurityException {
      
      //Cria par de chaves 
@@ -72,7 +78,7 @@ public class AuctionManager {
           String ReceivedMsg = new String(recvdpkt.getData());
           
           //Obter endereço do client
-          if(!client){
+          if((!recvdpkt.getAddress().toString().equals("127.0.0.1")) && (recvdpkt.getPort()!=9876 )){
             ClientIP = recvdpkt.getAddress();
             ClientPort = recvdpkt.getPort();
             client=true;
@@ -80,7 +86,7 @@ public class AuctionManager {
           
           JSONObject recMsg = new JSONObject(ReceivedMsg);
           System.out.println("\nClient : " + recMsg.toString());
-         
+          
           //Ver tipo de mensagem
           ComputeMessageType(ClientIP,ClientPort,serverSocket, recMsg, cert);
       }
@@ -190,22 +196,32 @@ public class AuctionManager {
                     }
                     break;
         
+            case "clientID":
+                    newClientID();
+                    retJSON = new JSONObject("{ \"Type\":\"clientID\",\"clientID\":"+clientID+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                    break;
             case "cta":
                     //Mandar mensagem ao AuctionRepository para ele fazer o pretendido e devolver valores
                     messageRepository(serverSocket, msg);
                     break;
                 
-            case "rct" : case "ret": case"SUCCESS":
+            case "rct":
                     //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
-                    retMsg = "Operation completed with sucess!";
+                    retMsg = "Operation completed with success!";
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
+                    messageClient(ClientIP, ClientPort,serverSocket, retJSON);
+                    break;
+            case "SUCCESS":
+                    //Mandar mensagem ao Cliente a informar que o pretendido foi feito;
+                    retJSON = new JSONObject("{ \"Type\":\"SUCCESS\"}");
                     messageClient(ClientIP, ClientPort,serverSocket, retJSON);
                     break;
             default:
                     retMsg = "ERROR - Invalid message";
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":"+retMsg+"}");
                     messageClient(ClientIP, ClientPort,serverSocket, retJSON);
-                    break;     
+                    break;  
         }
     }
     
