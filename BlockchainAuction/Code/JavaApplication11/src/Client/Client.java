@@ -1,5 +1,6 @@
 package Client;
 
+import Server.SecurityRepository;
 import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -62,6 +63,7 @@ public class Client {
     private static SecretKey secretKeyRepository = null;
     private static PublicKey repositoryKey = null;
     private static Certificate repositoryCert = null;
+
 
     
     public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, GeneralSecurityException {
@@ -567,7 +569,18 @@ public class Client {
         
         receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
-        serverData = new String(receivePacket.getData());
+        
+        //Decriptar
+        byte[] receivedBytes = receivePacket.getData();
+        byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+        byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacket.getLength()); //Msg igual
+                
+        //Decriptar mensagem
+        if(receivePacket.getPort()==9876) msgEnc = SecurityClient.decryptMsgSym(msgEnc,secretKeyRepository, IV);
+        else  msgEnc = SecurityClient.decryptMsgSym(msgEnc,secretKeyManager, IV);
+
+        String serverData = new String(msgEnc); 
+        
         return new JSONObject(serverData);
     }
     
@@ -609,7 +622,18 @@ public class Client {
         
         receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
-        serverData = new String(receivePacket.getData());
+        
+        //Decriptar
+        byte[] receivedBytes = receivePacket.getData();
+        byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+        byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacket.getLength()); //Msg igual
+                
+        //Decriptar mensagem
+        if(receivePacket.getPort()==9876) msgEnc = SecurityClient.decryptMsgSym(msgEnc,secretKeyRepository, IV);
+        else  msgEnc = SecurityClient.decryptMsgSym(msgEnc,secretKeyManager, IV);
+
+        String serverData = new String(msgEnc); 
+                
         return new JSONObject(serverData);
     }
     

@@ -14,6 +14,7 @@ import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
@@ -45,6 +46,14 @@ public class AuctionManager {
     private static final ArrayList<Certificate> clientCert = new ArrayList<>();
     private static final ArrayList<SecretKey> clientSecret = new ArrayList<>();
     private static KeyPair kp;
+    
+    //Manager
+    private static Certificate repoCert = null;
+    private static SecretKey repoKey = null;
+    private static PublicKey pubRepo = null;
+    private static boolean agreement = false;
+    private static boolean clientAgreement = false;
+
    
     //Client ID
     private static int clientID=0;
@@ -81,7 +90,6 @@ public class AuctionManager {
           //ReceivedMsg = new String(recvdpkt.getData());
           
           byte[] receivedBytes = recvdpkt.getData();
-          System.out.println(Arrays.toString(Arrays.toString(receivedBytes).getBytes()));
           String ReceivedMsg = "";
           
           if(!(clientSecret.isEmpty() || new String(receivedBytes).contains("Type") || !atLeastOneClient)){
@@ -89,12 +97,17 @@ public class AuctionManager {
                 byte[] msg = Arrays.copyOfRange(receivedBytes, 16, recvdpkt.getLength()); //Msg igual
 
                 //Decriptar mensagem
-                msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
-                ReceivedMsg = new String(msg);
+                if(recvdpkt.getPort()==9876 && agreement){
+                    msg = SecurityManager.decryptMsgSym(msg, repoKey, IV);
+                    ReceivedMsg = new String(msg);
+                }else{
+                    msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
+                    ReceivedMsg = new String(msg);
+                }
           
             }else{
               ReceivedMsg = new String(receivedBytes);
-              System.out.println(ReceivedMsg);
+              //System.out.println(ReceivedMsg);
             }
             
           //Obter endereço do client
@@ -147,30 +160,90 @@ public class AuctionManager {
      */
     private static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException, GeneralSecurityException{
         String type = msg.getString(("Type"));
+        Gson gson = new Gson();
         String retMsg="";
         JSONObject retJSON;
 
         switch(type){
-            case "init":
+            case "init_server":
                     //Mandar certificado 
-                    messageClientCert(ClientIP, ClientPort,serverSocket,cert);
+                    messageRepositoryCert(serverSocket,cert);
                     
-                    //Receber certificado do cliente
+                    //Receber certificado do manager
                     byte[] receivebuffer = new byte[32768];
                     DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
                     serverSocket.receive(receivePacket);
                     byte[] certificateBytes = receivePacket.getData();
                     
-                    //Guardar certificado do cliente
+                    //Guardar certificado do manager
                     CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
                     X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
-                    clientCert.add(certificate);
-                    //System.out.println(certificate.toString());
+                    repoCert = certificate;
                     
                     //Validar certificado
                     try{
                         certificate.checkValidity();
-                        clientKeys.add(certificate.getPublicKey());
+                        pubRepo = certificate.getPublicKey();
+                        retMsg = "Valid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert_server\",\"Message\":"+retMsg+"}");
+                        messageRepository(serverSocket, retJSON);
+                    }catch(IOException | CertificateExpiredException | CertificateNotYetValidException | JSONException e){
+                        retMsg = "Invalid certificate";
+                        retJSON = new JSONObject("{ \"Type\":\"cert_server\",\"Message\":"+retMsg+"}");
+                        messageRepository(serverSocket, retJSON);
+                    }
+                    
+                    //Receber chave simétrica
+                    byte[] receivebuffer2 = new byte[64000];
+                    DatagramPacket receivePacket2 = new DatagramPacket(receivebuffer2, receivebuffer.length);
+                    serverSocket.receive(receivePacket2);
+                    String SymReceivedMsg = new String(receivePacket2.getData());
+                    JSONObject symMsg = new JSONObject(SymReceivedMsg);
+                    JSONArray data = symMsg.getJSONArray("Sym");
+                    JSONArray data2 = symMsg.getJSONArray("Data");
+                    
+                    //Decifrar mensagem
+                    byte[] dataKey = gson.fromJson(data.toString(), byte[].class); //Hash
+                    byte[] dataHash = gson.fromJson(data2.toString(),byte[].class); //Chave
+                    byte[] symKey = SecurityRepository.decryptMsg(pubRepo,dataKey);
+                    
+                    //Verificar assinatura
+                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+                    byte[] digest = messageDigest.digest(dataHash);
+                    
+                    //Obter chave simétrica
+                    SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
+                    
+                    if(Arrays.equals(digest, symKey)){
+                        repoKey=symetricKey;
+                        agreement = true;
+                        //System.out.println("Assinatura validada !");
+                    }else{
+                        System.out.println("Assinatura inválida !");
+                    }
+                    
+                    break;
+                    
+            case "init":
+                    //Mandar certificado 
+                    messageClientCert(ClientIP, ClientPort,serverSocket,cert);
+                    
+                    //Receber certificado do cliente
+                    byte[] receivebufferClient = new byte[32768];
+                    DatagramPacket receivePacketClient = new DatagramPacket(receivebufferClient, receivebufferClient.length);
+                    serverSocket.receive(receivePacketClient);
+                    byte[] certificateBytesClient = receivePacketClient.getData();
+                    
+                    //Guardar certificado do cliente
+                    CertificateFactory certificateFactoryClient = CertificateFactory.getInstance("X.509");
+                    X509Certificate certificateClient = (X509Certificate)(certificateFactoryClient.generateCertificate( new ByteArrayInputStream(certificateBytesClient)));
+                    clientCert.add(certificateClient);
+                    //System.out.println(certificate.toString());
+                    
+                    //Validar certificado
+                    try{
+                        certificateClient.checkValidity();
+                        clientKeys.add(certificateClient.getPublicKey());
                         retMsg = "Valid certificate";
                         retJSON = new JSONObject("{ \"Type\":\"cert\",\"Message\":"+retMsg+"}");
                         messageClient(ClientIP, ClientPort,serverSocket, retJSON);
@@ -183,40 +256,38 @@ public class AuctionManager {
                     }
                     
                     //Receber chave simétrica
-                    byte[] receivebuffer2 = new byte[64000];
-                    DatagramPacket receivePacket2 = new DatagramPacket(receivebuffer2, receivebuffer.length);
-                    serverSocket.receive(receivePacket2);
-                    String SymReceivedMsg = new String(receivePacket2.getData());
+                    byte[] receivebuffer2Client = new byte[64000];
+                    DatagramPacket receivePacket2Client = new DatagramPacket(receivebuffer2Client, receivebuffer2Client.length);
+                    serverSocket.receive(receivePacket2Client);
+                    String SymReceivedMsgClient = new String(receivePacket2Client.getData());
                     //System.out.println(SymReceivedMsg);
-                    JSONObject symMsg = new JSONObject(SymReceivedMsg);
-                    JSONArray data = symMsg.getJSONArray("Sym");
-                    JSONArray data2 = symMsg.getJSONArray("Data");
-                    Gson gson = new Gson();
+                    JSONObject symMsgClient = new JSONObject(SymReceivedMsgClient);
+                    JSONArray dataClient = symMsgClient.getJSONArray("Sym");
+                    JSONArray data2Client = symMsgClient.getJSONArray("Data");
                     
                     //Decifrar mensagem
-                    byte[] dataKey = gson.fromJson(data.toString(), byte[].class);
-                    byte[] dataHash = gson.fromJson(data2.toString(),byte[].class);
-                    byte[] symKey = SecurityManager.decryptMsg(clientKeys.get(0),dataKey);
+                    byte[] dataKeyClient = gson.fromJson(dataClient.toString(), byte[].class);
+                    byte[] dataHashClient = gson.fromJson(data2Client.toString(),byte[].class);
+                    byte[] symKeyClient = SecurityManager.decryptMsg(clientKeys.get(0),dataKeyClient);
                     
                     //Verificar assinatura
-                    MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-                    byte[] digest = messageDigest.digest(dataHash);
+                    MessageDigest messageDigestClient = MessageDigest.getInstance("SHA-256");
+                    byte[] digestClient = messageDigestClient.digest(dataHashClient);
                     
                     //Obter chave simétrica
-                    SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
+                    SecretKey symetricKeyClient = new SecretKeySpec(dataHashClient, 0, dataHashClient.length, "AES");
                     //System.out.println(Arrays.toString(symetricKey.toString().getBytes()));
                     
-                    if(Arrays.equals(digest, symKey)){
-                        clientSecret.add(symetricKey);
+                    if(Arrays.equals(digestClient, symKeyClient)){
+                        clientAgreement=true;
+                        clientSecret.add(symetricKeyClient);
                         //System.out.println("Assinatura validada !");
                     }else{
                         System.out.println("Assinatura inválida !");
                         //System.out.println(Arrays.toString(digest));
                         //System.out.println(Arrays.toString(symKey));
                     }
-                    
-                    System.out.println("UM CLIENTE");
-                    
+                                        
                     break;
         
             case "clientID":
@@ -257,14 +328,33 @@ public class AuctionManager {
      * @throws UnknownHostException
      * @throws IOException 
      */
-    private static void messageRepository(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static void messageRepository(DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException, GeneralSecurityException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
         byte[] sendbuffer;
         
-        sendbuffer = msg.toString().getBytes();        
-        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
-        serverSocket.send(sendPacket);
+        if(agreement){
+            //Gerar IV
+            Gson gson = new Gson();
+            byte[] initializationVector = new byte[16];
+            SecureRandom secRan = new SecureRandom(); 
+            secRan.nextBytes(initializationVector);
+
+            //Encriptrar
+            sendbuffer = msg.toString().getBytes();
+            sendbuffer = SecurityRepository.encryptMsgSym(sendbuffer, repoKey,initializationVector);
+
+            byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
+            System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
+            System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
+
+            DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
+            serverSocket.send(sendPacket);
+        }else{
+            sendbuffer = msg.toString().getBytes();        
+            DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+            serverSocket.send(sendPacket);
+        }
     }
     
     /**
@@ -277,11 +367,31 @@ public class AuctionManager {
      * @throws UnknownHostException
      * @throws IOException 
      */
-    private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException{
+    private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException, GeneralSecurityException{
         byte[] sendbuffer;
-        sendbuffer = msg.toString().getBytes();        
-        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
-        serverSocket.send(sendPacket);
+        
+        if(clientAgreement){
+            //Gerar IV
+            Gson gson = new Gson();
+            byte[] initializationVector = new byte[16];
+            SecureRandom secRan = new SecureRandom(); 
+            secRan.nextBytes(initializationVector);
+
+            //Encriptrar
+            sendbuffer = msg.toString().getBytes();
+            sendbuffer = SecurityRepository.encryptMsgSym(sendbuffer, clientSecret.get(clientID-1),initializationVector);
+
+            byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
+            System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
+            System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
+
+            DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ClientIP ,ClientPort);
+            serverSocket.send(sendPacket);
+        }else{
+            sendbuffer = msg.toString().getBytes();        
+            DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ClientIP ,ClientPort);
+            serverSocket.send(sendPacket);
+        }
     }
     
     /**
@@ -300,6 +410,25 @@ public class AuctionManager {
         sendbuffer = cert.getEncoded();
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ClientIP ,ClientPort);
         serverSocket.send(sendPacket);
+    }
+    
+    /**
+     * Envia o certificado do repositorio para o Servidor Manager
+     * 
+     * @param clientSocket Socket do Manager
+     * @param cert Certificado do Manager
+     * @throws java.net.UnknownHostException
+     * @throws IOException
+     * @throws java.security.cert.CertificateEncodingException
+     */
+    private static void messageRepositoryCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
+        InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
+        int ServerPort = 9876;
+        byte[] sendbuffer;
+        sendbuffer = cert.getEncoded();
+        
+        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ServerIP ,ServerPort);
+        clientSocket.send(sendPacket);
     }
 }
 
