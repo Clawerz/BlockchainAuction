@@ -48,8 +48,10 @@ public class AuctionManager {
    
     //Client ID
     private static int clientID=0;
+    private static boolean atLeastOneClient=false;
     public static void newClientID() {
          clientID++;
+         atLeastOneClient=true;
     }
     
     public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException, SignatureException, InvalidKeyException, GeneralSecurityException {
@@ -72,12 +74,29 @@ public class AuctionManager {
           
           //Receber informação
           byte[] receivebuffer = new byte[1024];
-          byte[] sendbuffer  = new byte[1024];
+          byte[] sendbuffer;
           DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
           serverSocket.receive(recvdpkt); 
-          String ReceivedMsg = "";
-          ReceivedMsg = new String(recvdpkt.getData());
           
+          //ReceivedMsg = new String(recvdpkt.getData());
+          
+          byte[] receivedBytes = recvdpkt.getData();
+          System.out.println(Arrays.toString(Arrays.toString(receivedBytes).getBytes()));
+          String ReceivedMsg = "";
+          
+          if(!(clientSecret.isEmpty() || new String(receivedBytes).contains("Type") || !atLeastOneClient)){
+                byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                byte[] msg = Arrays.copyOfRange(receivedBytes, 16, recvdpkt.getLength()); //Msg igual
+
+                //Decriptar mensagem
+                msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
+                ReceivedMsg = new String(msg);
+          
+            }else{
+              ReceivedMsg = new String(receivedBytes);
+              System.out.println(ReceivedMsg);
+            }
+            
           //Obter endereço do client
           if((!recvdpkt.getAddress().toString().equals("127.0.0.1")) && (recvdpkt.getPort()!=9876 )){
             ClientIP = recvdpkt.getAddress();
@@ -184,7 +203,7 @@ public class AuctionManager {
                     byte[] digest = messageDigest.digest(dataHash);
                     
                     //Obter chave simétrica
-                    SecretKey symetricKey = new SecretKeySpec(symKey, 0, symKey.length, "AES");
+                    SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
                     //System.out.println(Arrays.toString(symetricKey.toString().getBytes()));
                     
                     if(Arrays.equals(digest, symKey)){
@@ -195,6 +214,8 @@ public class AuctionManager {
                         //System.out.println(Arrays.toString(digest));
                         //System.out.println(Arrays.toString(symKey));
                     }
+                    
+                    System.out.println("UM CLIENTE");
                     
                     break;
         

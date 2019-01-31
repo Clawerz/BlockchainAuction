@@ -168,7 +168,7 @@ public class SecurityManager {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         
         //Definir IV
-         GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
+        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
         
         cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);
         

@@ -531,15 +531,34 @@ public class Client {
      * @throws UnknownHostException
      * @throws IOException
      */
-    private static JSONObject messageManager(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException{
+    private static JSONObject messageManager(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException, GeneralSecurityException{
         sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
         byte[] sendbuffer  = new byte[1024];
+        
+        if(sendObj.getString("Type").equals("clientID")){
+            sendbuffer = msg.toString().getBytes();        
+            DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
+            clientSocket.send(sendPacket);
+        }else{
+            //Gerar IV
+            Gson gson = new Gson();
+            byte[] initializationVector = new byte[16];
+            SecureRandom secRan = new SecureRandom(); 
+            secRan.nextBytes(initializationVector);
 
-        sendbuffer = msg.toString().getBytes();        
-        DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
-        clientSocket.send(sendPacket);
+            //Encriptrar
+            sendbuffer = msg.getBytes();
+            sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyManager,initializationVector);
+
+            byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
+            System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
+            System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
+
+            DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
+            clientSocket.send(sendPacket);
+        }
         
         if(msg.equals(("end"))){
             clientSocket.close();
@@ -648,9 +667,10 @@ public class Client {
         //Gerar chave simétrica
         if(simetricKeyGen){
             try {
-                KeyGenerator kgen = KeyGenerator.getInstance("AES");
+                /*KeyGenerator kgen = KeyGenerator.getInstance("AES");
                 kgen.init(128, new SecureRandom());
-                secretKeyManager = kgen.generateKey();
+                secretKeyManager = kgen.generateKey();*/
+                secretKeyManager= KeyGenerator.getInstance("AES").generateKey();
    
                 //Assinar chave
                 MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -658,19 +678,18 @@ public class Client {
                 
                 //Encriptar
                 byte[] symKey = SecurityClient.encryptMsg(digest,SecurityClient.getPrivateKey());
-                
+
                 //Envia chave simetrica
                 Gson gson = new Gson();
                 String json = ""+gson.toJson(symKey);
                 String json2 = ""+gson.toJson(secretKeyManager.getEncoded());
                 sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
-                sendObj = new JSONObject(sendMsg);                
-                
+                sendObj = new JSONObject(sendMsg);                               
             } catch (NoSuchAlgorithmException ex) {
                 System.out.println("Impossible to generate Symetric Key.");
             }
         }
-        sendbuffer = sendObj.toString().getBytes();        
+        sendbuffer = sendObj.toString().getBytes();
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
     }
