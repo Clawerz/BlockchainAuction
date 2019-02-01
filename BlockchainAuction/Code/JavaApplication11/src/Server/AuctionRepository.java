@@ -620,8 +620,8 @@ public class AuctionRepository {
                     
                     String toSign = ",\"AuctionID\":"+msg2.getInt("AuctionID")+",\"Amount\":"+msg2.getDouble("Amount")+",\"ClientID\":"+msg2.getInt("ClientID")+"}";
                     String signed = ""+gson.toJson(SecurityRepository.sign(toSign.getBytes(), kp));
-                    sendMsg = "{ \"Type\":\"Receipt\", \"Sign\":"+signed+""+toSign+"}";
-                    
+                    sendMsg = "{ \"Type\":\"Receipt\", \"Sign\":\""+signed+"\""+toSign+"}";
+                    retJSON = new JSONObject(sendMsg);
                 }else{
                     //Devolver mensagem
                     retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Invalid bid!\"}");

@@ -417,6 +417,7 @@ public class Client {
                                 rec = messageRepository(clientSocket,sendMsg);
 
                                 type = rec.getString(("Type"));
+                                System.out.println("\n\ntype: " + type);
                                 switch(type){
                                     case "ret":
                                         for(int i=1; i < rec.names().length();i++){
@@ -426,15 +427,26 @@ public class Client {
                                         break;
                                     
                                     case "Receipt":
+                                        String receiptText = "";
                                         String fileName;
                                         System.out.print("\nInsira o nome do ficheiro para guardar como recibo: ");
                                         fileName = br.readLine();
+                                        
+                                        int receiptAuctionID = rec.getInt("AuctionID");
+                                        double receiptAmount = rec.getDouble("Amount");
+                                        int receiptClientID = rec.getInt("ClientID");
+                                        String signature = rec.getString("Sign");
+                                        
+                                        receiptText += "Id do Leilão: " + receiptAuctionID;
+                                        receiptText += "\nQuantia: " + receiptAmount;
+                                        receiptText += "\nId do Cliente: " + receiptClientID;
+                                        receiptText += "\n\nAssinatura digital: " + signature;
+                                        
                                         try {
-                                            String str = rec.getString("cenas");
                                             File newTextFile = new File(fileName + ".txt");
 
                                             FileWriter fw = new FileWriter(newTextFile);
-                                            fw.write(str);
+                                            fw.write(receiptText);
                                             fw.close();
 
                                         } catch (IOException e) {
