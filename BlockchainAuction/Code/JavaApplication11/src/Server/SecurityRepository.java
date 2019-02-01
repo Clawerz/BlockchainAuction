@@ -242,6 +242,14 @@ public class SecurityRepository {
         return false;
     }
     
-    
+    static byte[] sign(byte[] dataBuffer, KeyPair kp) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
+        //Fazer assinatura de um objecto
+        Signature s = Signature.getInstance("SHA256withRSA");
+        
+        s.initSign((PrivateKey)kp.getPrivate());
+        s.update(dataBuffer);
+        byte [] sign = s.sign();
+        return sign;
+    }
 
 }

@@ -5,6 +5,8 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.DatagramPacket;
@@ -421,7 +423,25 @@ public class Client {
                                             List tmp = rec.names().toList();
                                             System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
                                         }
-                                    break;
+                                        break;
+                                    
+                                    case "Receipt":
+                                        String fileName;
+                                        System.out.print("\nInsira o nome do ficheiro para guardar como recibo: ");
+                                        fileName = br.readLine();
+                                        try {
+                                            String str = rec.getString("cenas");
+                                            File newTextFile = new File(fileName + ".txt");
+
+                                            FileWriter fw = new FileWriter(newTextFile);
+                                            fw.write(str);
+                                            fw.close();
+
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
+                                        break;
+                                    
                                     default:
                                         for(int i=1; i < rec.names().length();i++){
                                         List tmp = rec.names().toList();
