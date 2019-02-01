@@ -103,15 +103,6 @@ public class SecurityClient {
         s.update(dataBuffer);
         byte [] sign = s.sign();
         return sign;
-
-        //Verificar assinatura
-        /*Signature s2 = Signature.getInstance("SHA256withRSA");
-        byte [] dataBuffer2 = "So_para_o_teste".getBytes();
-        s2.initVerify(ks.getCertificate("CITIZEN AUTHENTICATION CERTIFICATE"));
-        s2.update(dataBuffer2);
-        if(s2.verify(sign)){
-            System.out.println("Assinatura verificada com sucesso!");
-        }*/
     }
     
     /**

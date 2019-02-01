@@ -104,12 +104,9 @@ public class AuctionManager {
 
                 //Decriptar mensagem
                 if(recvdpkt.getPort()==9876 && agreement){
-                    System.out.println(Arrays.toString(repoKey.getEncoded()));
-                    System.out.println("msg"+Arrays.toString(msg));
                     msg = SecurityManager.decryptMsgSym(msg, repoKey, IV);
                     ReceivedMsg = new String(msg);
                 }else{
-                    System.out.println("ELSE"+Arrays.toString(clientSecret.get(clientID-1).getEncoded()));
                     msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
                     ReceivedMsg = new String(msg);
                 }
@@ -224,7 +221,6 @@ public class AuctionManager {
                     SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
                     
                     if(Arrays.equals(digest, symKey)){
-                        System.out.println(Arrays.toString(symetricKey.getEncoded()));
                         repoKey=symetricKey;
                         agreement = true;
                         //System.out.println("Assinatura validada !");
@@ -248,7 +244,6 @@ public class AuctionManager {
                     CertificateFactory certificateFactoryClient = CertificateFactory.getInstance("X.509");
                     X509Certificate certificateClient = (X509Certificate)(certificateFactoryClient.generateCertificate( new ByteArrayInputStream(certificateBytesClient)));
                     clientCert.add(certificateClient);
-                    //System.out.println(certificate.toString());
                     
                     //Validar certificado
                     try{
@@ -270,7 +265,6 @@ public class AuctionManager {
                     DatagramPacket receivePacket2Client = new DatagramPacket(receivebuffer2Client, receivebuffer2Client.length);
                     serverSocket.receive(receivePacket2Client);
                     String SymReceivedMsgClient = new String(receivePacket2Client.getData());
-                    //System.out.println(SymReceivedMsg);
                     JSONObject symMsgClient = new JSONObject(SymReceivedMsgClient);
                     JSONArray dataClient = symMsgClient.getJSONArray("Sym");
                     JSONArray data2Client = symMsgClient.getJSONArray("Data");
@@ -286,7 +280,6 @@ public class AuctionManager {
                     
                     //Obter chave simétrica
                     SecretKey symetricKeyClient = new SecretKeySpec(dataHashClient, 0, dataHashClient.length, "AES");
-                    //System.out.println(Arrays.toString(symetricKey.toString().getBytes()));
                     
                     if(Arrays.equals(digestClient, symKeyClient)){
                         clientAgreement=true;
@@ -294,8 +287,7 @@ public class AuctionManager {
                         //System.out.println("Assinatura validada !");
                     }else{
                         System.out.println("Assinatura inválida !");
-                        //System.out.println(Arrays.toString(digest));
-                        //System.out.println(Arrays.toString(symKey));
+
                     }
                                         
                     break;
@@ -309,7 +301,6 @@ public class AuctionManager {
                     
             case "bid":
                     double amount = msg.getDouble("Amount");
-                    System.out.println(amount);
                     
                     //Receber chave simétrica
                     byte[] receiveHighest = new byte[64000];

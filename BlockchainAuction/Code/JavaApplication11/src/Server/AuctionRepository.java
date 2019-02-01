@@ -120,9 +120,9 @@ public class AuctionRepository {
           
             }else{
               ReceivedMsg = new String(receivedBytes);
-              //System.out.println(ReceivedMsg);
             }
             
+            System.out.println("Received : "+ReceivedMsg);
             JSONObject recMsg = new JSONObject(ReceivedMsg);
             ComputeMessageType(serverSocket,recMsg,ClientIP, ClientPort,cert);
 
@@ -221,9 +221,7 @@ public class AuctionRepository {
                     
                     if(Arrays.equals(digestClient, symKeyClient)){
                         clientAgreement = true;
-                        clientSecret.add(symetricKeyClient);
-                        System.out.println("C"+symetricKeyClient.getEncoded());
-                        
+                        clientSecret.add(symetricKeyClient);                        
                         //System.out.println("Assinatura validada !");
                     }else{
                         System.out.println("Assinatura inválida !");
@@ -295,17 +293,17 @@ public class AuctionRepository {
                             //Validar assinatura
                             if(SecurityRepository.verifySign(signedMessage, dataFromSignature.getBytes(), clientCert.get(clientID-1))){
                                 if(AuctionList.get(i).isEnglishAuction()){
-                                    toClient.put("Valor",AuctionList.get(i).getBids().get(j).getValue());
-                                    toClient.put("Cliente",AuctionList.get(i).getBids().get(j).getClientID());
+                                    toClient.append("Valor",AuctionList.get(i).getBids().get(j).getValue());
+                                    toClient.append("Cliente",AuctionList.get(i).getBids().get(j).getClientID());
                                 }else{
-                                    toClient.put("Valor",AuctionList.get(i).getBids().get(j).getValue());
+                                    toClient.append("Valor",AuctionList.get(i).getBids().get(j).getValue());
                                 }
-                                System.out.println("Bid validada");
-                            }
+                                //System.out.println("Bid validada");
+                            }                          
                         }
-                        toClientJSON.put(toClient);
                     }
                 }
+                toClientJSON.put(toClient);
                 
                 //Terminar leilão
                 boolean found = false;
@@ -336,13 +334,14 @@ public class AuctionRepository {
                         String list = AuctionList.get(i).getBids().toString();
                         AuctionList.get(i).getBids().remove(j);
                         if(SecurityRepository.verifyHash(AuctionList.get(i).getBids().toString().getBytes(), AuctionList.get(i).getBlockChain().get(j))){
-                            System.out.println("Verifica"+j);
-                            toClient2.put("Lista",list);
-                            toClient2.put("Chain",AuctionList.get(i).getBlockChain().get(j));
+                            toClient2.append("Lista",list);
+                            toClient2.append("Chain",AuctionList.get(i).getBlockChain().get(j));
                         }
-                        toClientJSON2.put(toClient2);
+                        
                     }         
                 }
+                
+                toClientJSON2.put(toClient2);
                 
                 retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+toClientJSON.toString()+", \"Chain\":"+toClientJSON2.toString()+"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
@@ -519,7 +518,6 @@ public class AuctionRepository {
                 byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBid.getLength()); //Msg igual
                 
                 //Decriptar mensagem
-                System.out.println("C"+Arrays.toString(clientSecret.get(clientID-1).getEncoded()));
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 String puzzleReceivedMsg = new String(msgEnc); 
                 JSONObject puzzleMsg = new JSONObject(puzzleReceivedMsg);
@@ -530,7 +528,6 @@ public class AuctionRepository {
                 if(Arrays.equals(solution, puzzle)){
                     sendMsg = "{ \"Type\":\"Puzzle\",\"Result\":\"SUCESS\"}";
                     sendObj = new JSONObject(sendMsg);
-                    System.out.println(sendObj.toString());
                     messageClient(ClientIP,ClientPort,serverSocket,sendObj);
                 } 
                 
@@ -579,25 +576,19 @@ public class AuctionRepository {
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 ReceivedMsg = new String(msgEnc);
-                System.out.println(ReceivedMsg);
                 
                 //Manda Bid para o Manager verificar a bid
                 JSONObject msg2 = new JSONObject(ReceivedMsg);
-                System.out.println("man1");
                 messageManager(serverSocket,msg2);
                 
                 ReceivedMsg = "{ \"Type\":\"bid\",\"Highest\":"+getHighest(msg2.getInt("AuctionID"))+",\"AuctionType\":"+getAuctionType(msg2.getInt("AuctionID"))+"}";
                 JSONObject msg4 = new JSONObject(ReceivedMsg);
-                System.out.println("man2");
-
                 messageManager(serverSocket,msg4);
-                System.out.println("man3");                
                 
                 //Esperar validação do manager
                 byte[] receivebufferBidValid = new byte[30000];
                 DatagramPacket receivePacketBidValid = new DatagramPacket(receivebufferBidValid, receivebufferBidValid.length);
                 serverSocket.receive(receivePacketBidValid);
-                System.out.println("man4");
                 //Decriptar
                 receivedBytes = receivePacketBidValid.getData();
                 IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
@@ -609,7 +600,6 @@ public class AuctionRepository {
                 
                 JSONObject receivedValid = new JSONObject(ReceivedMsg);
                 String validBid = receivedValid.getString("Message");
-                System.out.println(receivedValid.toString());
                 if(validBid.equals("Valid")){
                     for(int i=0; i<AuctionList.size();i++){
                         if(AuctionList.get(i).getAuctionID() == msg2.getInt("AuctionID"))
@@ -661,15 +651,13 @@ public class AuctionRepository {
         SecureRandom secRan = new SecureRandom(); 
         secRan.nextBytes(initializationVector);
 
-        //EncriptrarS
-        System.out.println(Arrays.toString(managerKey.getEncoded()));
+        //Encriptrar
         sendbuffer = msg.toString().getBytes();
         sendbuffer = SecurityRepository.encryptMsgSym(sendbuffer, managerKey,initializationVector);
 
         byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
         System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
         System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
-        System.out.println("msg"+Arrays.toString(sendbuffer));
         DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
         serverSocket.send(sendPacket);
     }
@@ -815,7 +803,6 @@ public class AuctionRepository {
                 Gson gson = new Gson();
                 String json = ""+gson.toJson(symKey);
                 String json2 = ""+gson.toJson(managerKey.getEncoded());
-                System.out.println(Arrays.toString(managerKey.getEncoded()));
                 sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
                 sendObj = new JSONObject(sendMsg);                               
             } catch (NoSuchAlgorithmException ex) {

@@ -13,7 +13,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Principal;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.SignatureException;
@@ -26,7 +25,6 @@ import java.util.Calendar;
 import java.util.Date;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.IvParameterSpec;
 import sun.security.x509.AlgorithmId;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateSerialNumber;
@@ -182,8 +180,7 @@ public class SecurityRepository {
      */
     static byte[] encryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
-    
+        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector); 
         cipher.init(Cipher.ENCRYPT_MODE, keySym,ivSpec);
         byte[] output = cipher.doFinal(input);
         return output;
@@ -200,13 +197,10 @@ public class SecurityRepository {
      * @throws java.security.GeneralSecurityException
      */
     static byte[] decryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");       
         //Definir IV
         GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
-        
-        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);
-        
+        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);      
         byte[] output = cipher.doFinal(input);
         return output;
 
@@ -229,7 +223,6 @@ public class SecurityRepository {
         s2.initVerify(cert);
         s2.update(input);
         if(s2.verify(sign)){
-            System.out.println("Assinatura verificada com sucesso!");
             return true;
         }
         return false;
@@ -237,8 +230,7 @@ public class SecurityRepository {
     
     static byte[] hash(byte[] data) throws NoSuchAlgorithmException{
         MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-        byte[] digest = messageDigest.digest(data);
-        
+        byte[] digest = messageDigest.digest(data);       
         return digest;
     }
     
@@ -246,8 +238,6 @@ public class SecurityRepository {
         //Assinar chave
         MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
         byte[] digest = messageDigest.digest(data);
-        System.out.println("digest "+Arrays.toString(digest));
-        System.out.println("hash" +Arrays.toString(hash));
         if(Arrays.equals(digest, hash)) return true;
         return false;
     }

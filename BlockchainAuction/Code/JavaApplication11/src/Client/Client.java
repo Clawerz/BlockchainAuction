@@ -200,8 +200,8 @@ public class Client {
                                     }
                                     else{
                                         System.out.print("\nLeilão terminado com sucesso.");
-                                        System.out.println(rec.getJSONArray("SUCCESS"));
-                                        System.out.println(rec.getJSONArray("Chain"));
+                                        System.out.println("\nLista de bids: " + rec.getJSONArray("SUCCESS"));
+                                        System.out.println("Blockchain e bid associado: "+rec.getJSONArray("Chain"));
                                     }
                                 break;
                             }
@@ -612,8 +612,6 @@ public class Client {
 
         //Encriptrar
         sendbuffer = msg.getBytes();
-        
-        System.out.println("C"+Arrays.toString(secretKeyRepository.getEncoded()));
         sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyRepository,initializationVector);
         
         byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
@@ -715,7 +713,6 @@ public class Client {
                 Gson gson = new Gson();
                 String json = ""+gson.toJson(symKey);
                 String json2 = ""+gson.toJson(secretKeyManager.getEncoded());
-                System.out.println(Arrays.toString(secretKeyManager.getEncoded()));
                 sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
                 sendObj = new JSONObject(sendMsg);                               
             } catch (NoSuchAlgorithmException ex) {
@@ -774,7 +771,6 @@ public class Client {
            String msg = recMsg.getString(("Message"));
            if(msg.equals("Valid certificate")){
                simetricKeyGen = true;
-               //System.out.println("Ready to generate Symetric Key.");
            }
         }
         
