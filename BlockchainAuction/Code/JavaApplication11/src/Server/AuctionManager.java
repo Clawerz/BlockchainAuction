@@ -1,7 +1,4 @@
 package Server;
-import Auction.Auction;
-import Auction.Bid;
-import Client.SecurityClient;
 import com.google.gson.Gson;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -10,7 +7,6 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -29,12 +25,12 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import sun.security.util.IOUtils;
 
 /**
  *
@@ -58,7 +54,10 @@ public class AuctionManager {
     private static PublicKey pubRepo = null;
     private static boolean agreement = false;
     private static boolean clientAgreement = false;
+    private static byte[] initializationVectorBid = new byte[16];
    
+    private static SecretKey bidEncrypt = null;
+    
     //Client ID
     private static int clientID=0;
     private static boolean atLeastOneClient=false;
@@ -71,6 +70,9 @@ public class AuctionManager {
      
      //Cria par de chaves 
      kp = SecurityManager.generateKey();
+     bidEncrypt =KeyGenerator.getInstance("AES").generateKey();
+     SecureRandom secRan = new SecureRandom(); 
+     secRan.nextBytes(initializationVectorBid);
      
      //Criar certificado
      X509Certificate cert = SecurityManager.generateCert(kp,"CN=Server_Manager, L=Aveiro, C=PT", 100, "SHA1withRSA");
@@ -86,7 +88,7 @@ public class AuctionManager {
       while(true){
           
           //Receber informação
-          byte[] receivebuffer = new byte[1024];
+          byte[] receivebuffer = new byte[30000];
           byte[] sendbuffer;
           DatagramPacket recvdpkt = new DatagramPacket(receivebuffer, receivebuffer.length);
           serverSocket.receive(recvdpkt); 
@@ -102,9 +104,12 @@ public class AuctionManager {
 
                 //Decriptar mensagem
                 if(recvdpkt.getPort()==9876 && agreement){
+                    System.out.println(Arrays.toString(repoKey.getEncoded()));
+                    System.out.println("msg"+Arrays.toString(msg));
                     msg = SecurityManager.decryptMsgSym(msg, repoKey, IV);
                     ReceivedMsg = new String(msg);
                 }else{
+                    System.out.println("ELSE"+Arrays.toString(clientSecret.get(clientID-1).getEncoded()));
                     msg = SecurityManager.decryptMsgSym(msg, clientSecret.get(clientID-1), IV);
                     ReceivedMsg = new String(msg);
                 }
@@ -174,7 +179,7 @@ public class AuctionManager {
                     messageRepositoryCert(serverSocket,cert);
                     
                     //Receber certificado do manager
-                    byte[] receivebuffer = new byte[32768];
+                    byte[] receivebuffer = new byte[30000];
                     DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
                     serverSocket.receive(receivePacket);
                     byte[] certificateBytes = receivePacket.getData();
@@ -198,7 +203,7 @@ public class AuctionManager {
                     }
                     
                     //Receber chave simétrica
-                    byte[] receivebuffer2 = new byte[64000];
+                    byte[] receivebuffer2 = new byte[30000];
                     DatagramPacket receivePacket2 = new DatagramPacket(receivebuffer2, receivebuffer.length);
                     serverSocket.receive(receivePacket2);
                     String SymReceivedMsg = new String(receivePacket2.getData());
@@ -219,6 +224,7 @@ public class AuctionManager {
                     SecretKey symetricKey = new SecretKeySpec(dataHash, 0, dataHash.length, "AES");
                     
                     if(Arrays.equals(digest, symKey)){
+                        System.out.println(Arrays.toString(symetricKey.getEncoded()));
                         repoKey=symetricKey;
                         agreement = true;
                         //System.out.println("Assinatura validada !");
@@ -233,7 +239,7 @@ public class AuctionManager {
                     messageClientCert(ClientIP, ClientPort,serverSocket,cert);
                     
                     //Receber certificado do cliente
-                    byte[] receivebufferClient = new byte[32768];
+                    byte[] receivebufferClient = new byte[30000];
                     DatagramPacket receivePacketClient = new DatagramPacket(receivebufferClient, receivebufferClient.length);
                     serverSocket.receive(receivePacketClient);
                     byte[] certificateBytesClient = receivePacketClient.getData();
@@ -260,7 +266,7 @@ public class AuctionManager {
                     }
                     
                     //Receber chave simétrica
-                    byte[] receivebuffer2Client = new byte[64000];
+                    byte[] receivebuffer2Client = new byte[30000];
                     DatagramPacket receivePacket2Client = new DatagramPacket(receivebuffer2Client, receivebuffer2Client.length);
                     serverSocket.receive(receivePacket2Client);
                     String SymReceivedMsgClient = new String(receivePacket2Client.getData());
@@ -296,7 +302,7 @@ public class AuctionManager {
                     
             case "decrypt":
                     JSONArray encrypted = msg.getJSONArray("Sign");
-                    byte[] decrypted = SecurityManager.decryptMsg(kp.getPublic(), gson.fromJson(encrypted.toString(), byte[].class));
+                    byte[] decrypted = SecurityManager.decryptMsgSym(gson.fromJson(encrypted.toString(), byte[].class),bidEncrypt, initializationVectorBid);
                     String sendDecrypted = gson.toJson(decrypted);
                     messageRepository(serverSocket,new JSONObject("{ \"Type\":\"decrypt\",\"decrypt\":"+sendDecrypted+"}"));
                     break;
@@ -489,7 +495,7 @@ public class AuctionManager {
         
         String ret = "";
         if(validBid){
-            byte[] signedEncrypted = SecurityManager.encryptMsg(signed, kp.getPrivate());
+            byte[] signedEncrypted = SecurityManager.encryptMsgSym(signed, bidEncrypt, initializationVectorBid);
             String encrypted = ""+gson.toJson(signedEncrypted);
             ret = "{ \"Type\":\"ret\",\"Message\":Valid,\"Encrypted\":"+encrypted+"}";
         }

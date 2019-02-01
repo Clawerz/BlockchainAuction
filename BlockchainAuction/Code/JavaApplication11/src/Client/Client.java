@@ -48,7 +48,7 @@ public class Client {
     private static JSONObject sendObj=null;
     private static DatagramSocket clientSocket;
     private static DatagramPacket receivePacket;
-    private static byte[] receivebuffer = new byte[1024];
+    private static byte[] receivebuffer = new byte[30000];
     private static String serverData;
     private static JSONObject rec;
     
@@ -75,7 +75,7 @@ public class Client {
         BufferedReader br =new BufferedReader(new InputStreamReader(System.in));
         InetAddress IP = InetAddress.getByName("127.0.0.1");
         clientSocket = new DatagramSocket();
-        byte[] sendbuffer = new byte[1024];
+        byte[] sendbuffer;
         initCommunicationManager(clientSocket,managerKey);
         initCommunicationRepository(clientSocket,repositoryKey);
         int clientID = 0;
@@ -543,7 +543,7 @@ public class Client {
         sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
         
         if(sendObj.getString("Type").equals("clientID")){
             sendbuffer = msg.toString().getBytes();        
@@ -602,7 +602,7 @@ public class Client {
         sendObj = new JSONObject(msg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer=new byte[1024];
+        byte[] sendbuffer;
         
         //Gerar IV
         Gson gson = new Gson();
@@ -613,6 +613,7 @@ public class Client {
         //Encriptrar
         sendbuffer = msg.getBytes();
         
+        System.out.println("C"+Arrays.toString(secretKeyRepository.getEncoded()));
         sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyRepository,initializationVector);
         
         byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
@@ -659,13 +660,13 @@ public class Client {
         JSONObject sendObj = new JSONObject(sendMsg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9877;
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
         sendbuffer = sendObj.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
         //Manager 
-        byte[] receivebuffer = new byte[32768];
+        byte[] receivebuffer = new byte[30000];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
         
@@ -714,6 +715,7 @@ public class Client {
                 Gson gson = new Gson();
                 String json = ""+gson.toJson(symKey);
                 String json2 = ""+gson.toJson(secretKeyManager.getEncoded());
+                System.out.println(Arrays.toString(secretKeyManager.getEncoded()));
                 sendMsg = "{ \"Sym\":"+json+",\"Data\":"+json2+"}";
                 sendObj = new JSONObject(sendMsg);                               
             } catch (NoSuchAlgorithmException ex) {
@@ -740,13 +742,13 @@ public class Client {
         JSONObject sendObj = new JSONObject(sendMsg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
-        byte[] sendbuffer  = new byte[1024];
+        byte[] sendbuffer;
         sendbuffer = sendObj.toString().getBytes();        
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
         //Repositorio
-        byte[] receivebuffer = new byte[32768];
+        byte[] receivebuffer = new byte[30000];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
         
