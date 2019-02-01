@@ -176,5 +176,21 @@ public class SecurityManager {
         return output;
 
     }
+    
+     /**
+     * Encripta uma mensagem, usando chaves assimetricas 
+     * 
+     * @param input mensagem a ser encriptada
+     * @param keyServer chave publica do servidor neste caso
+     * @return mensagem encriptada
+     * @throws java.io.IOException
+     * @throws java.security.GeneralSecurityException
+     */
+    static byte[] encryptMsg(byte[] input, Key keyServer) throws IOException, GeneralSecurityException {
+        Cipher cipher = Cipher.getInstance("RSA");
+        cipher.init(Cipher.ENCRYPT_MODE, keyServer);
+        byte[] output = cipher.doFinal(input);
+        return output;
+    }
 
 }

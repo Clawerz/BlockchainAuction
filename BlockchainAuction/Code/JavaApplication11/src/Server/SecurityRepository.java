@@ -7,12 +7,17 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Signature;
 import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
@@ -203,6 +208,29 @@ public class SecurityRepository {
         byte[] output = cipher.doFinal(input);
         return output;
 
+    }
+    
+    /**
+     * Verifica assinatura
+     * 
+     * @param ks Keystore com as chaves para assinar
+     * @throws java.security.NoSuchAlgorithmException
+     * @throws java.security.InvalidKeyException
+     * @throws java.security.SignatureException
+     * @throws java.security.KeyStoreException
+     * @throws java.security.UnrecoverableKeyException
+
+     */
+    static boolean verifySign(byte[] sign, byte[] input, Certificate cert) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
+        //Verificar assinatura
+        Signature s2 = Signature.getInstance("SHA256withRSA");
+        s2.initVerify(cert);
+        s2.update(input);
+        if(s2.verify(sign)){
+            System.out.println("Assinatura verificada com sucesso!");
+            return true;
+        }
+        return false;
     }
 
 }

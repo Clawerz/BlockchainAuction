@@ -1,9 +1,10 @@
 package Client;
 
-import Server.SecurityRepository;
 import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.DatagramPacket;
@@ -11,6 +12,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
@@ -27,7 +29,6 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import org.json.*;
@@ -194,11 +195,12 @@ public class Client {
                             String type = rec.getString(("Type"));
                             switch(type){
                                 case "SUCCESS":
-                                    if(rec.getBoolean("SUCCESS")){
-                                        System.out.print("\nLeilão terminado com sucesso.");
+                                    if(rec.getJSONArray("SUCCESS").isEmpty()){
+                                        System.out.print("\nERRO! Leilão não encontrado!");           
                                     }
                                     else{
-                                        System.out.print("\nERRO! Leilão não encontrado!");
+                                        System.out.print("\nLeilão terminado com sucesso.");
+                                        System.out.println(rec.getJSONArray("SUCCESS"));
                                     }
                                 break;
                             }
@@ -314,7 +316,8 @@ public class Client {
                                 }
                             }
                             messageType = "coa";
-                            sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";                            sendObj = new JSONObject(sendMsg);
+                            sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";                            
+                            sendObj = new JSONObject(sendMsg);
                             
                             rec = messageRepository(clientSocket,sendMsg);
 
@@ -403,8 +406,11 @@ public class Client {
                                         System.out.print("\nERRO! Insira um número! (Usar \".\" em vez de \",\" para separar a parte inteira da parte decimal)");
                                     }
                                 }
-                                sendMsg = "{ \"Type\":"+messageType+",\"AuctionID\":"+auctionID+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
 
+                                String toSign = ",\"AuctionID\":"+auctionID+",\"Amount\":"+amount+",\"ClientID\":"+clientID+"}";
+                                String signed = ""+gson.toJson(SecurityClient.sign(toSign.getBytes()));
+                                sendMsg = "{ \"Type\":"+messageType+",\"Sign\":"+signed+""+toSign+"}";
+                                
                                 rec = messageRepository(clientSocket,sendMsg);
 
                                 type = rec.getString(("Type"));
@@ -426,8 +432,7 @@ public class Client {
                         }else{
                             System.out.println("ERROR : Solve the puzzle first");
                         }
-                        
-                        
+                                         
                         break;
                         
                     case "0":
@@ -606,12 +611,13 @@ public class Client {
 
         //Encriptrar
         sendbuffer = msg.getBytes();
+        
         sendbuffer = SecurityClient.encryptMsgSym(sendbuffer, secretKeyRepository,initializationVector);
         
         byte [] sendbufferIV = new byte[sendbuffer.length+initializationVector.length];
         System.arraycopy(initializationVector, 0, sendbufferIV, 0, initializationVector.length);
         System.arraycopy(sendbuffer, 0, sendbufferIV, initializationVector.length, sendbuffer.length);
-              
+        
         DatagramPacket sendPacket = new DatagramPacket(sendbufferIV, sendbufferIV.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
@@ -836,4 +842,17 @@ public class Client {
         clientSocket.send(sendPacket);
     }
     
+    
+    private static byte[] intToByteArray ( final int i ) throws IOException {      
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(bos);
+        dos.writeInt(i);
+        dos.flush();
+        return bos.toByteArray();
+    }
+
+    private int convertByteArrayToInt(byte[] intBytes){
+        ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes);
+        return byteBuffer.getInt();
+    }    
 }

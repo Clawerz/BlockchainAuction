@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -37,7 +38,6 @@ import java.util.Enumeration;
 import java.util.List;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.IvParameterSpec;
 
 public class SecurityClient {
     
@@ -61,9 +61,6 @@ public class SecurityClient {
         //Lista os objectos dentro do CC
         //Os que nos interessam são o CITIZEN AUTHENTICATION CERTIFICATE e CITIZEN SIGNATURE CERTIFICATE
         Enumeration<String> aliases = ks.aliases();
-       /* while (aliases.hasMoreElements()) {
-            System.out.println( aliases.nextElement() );
-        }*/
     }
     
     /**
@@ -105,7 +102,6 @@ public class SecurityClient {
         s.initSign((PrivateKey)ks.getKey("CITIZEN AUTHENTICATION CERTIFICATE", null));
         s.update(dataBuffer);
         byte [] sign = s.sign();
-        System.out.println("Dados assinados.");
         return sign;
 
         //Verificar assinatura
@@ -198,7 +194,6 @@ public class SecurityClient {
         while(!Arrays.equals(solution, puzzle)){
             SecureRandom secRan = new SecureRandom(); 
             secRan.nextBytes(solution); 
-            //System.out.println(Arrays.toString(solution));
         }
         return solution;
     }
@@ -232,13 +227,10 @@ public class SecurityClient {
      * @throws java.security.GeneralSecurityException
      */
     static byte[] decryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
-        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");  
         //Definir IV
-         GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);
-        
-        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);
-        
+        GCMParameterSpec ivSpec = new GCMParameterSpec(16 * Byte.SIZE, initializationVector);       
+        cipher.init(Cipher.DECRYPT_MODE, keySym, ivSpec);       
         byte[] output = cipher.doFinal(input);
         return output;
 

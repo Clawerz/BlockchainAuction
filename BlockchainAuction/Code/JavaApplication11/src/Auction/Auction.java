@@ -17,6 +17,7 @@ public class Auction {
     private boolean auctionFinished;
     private int buyerID;
     private Bid winnerBid;
+    private ArrayList<byte[]> bids_signed_encrypted = new ArrayList<byte[]>();
     private ArrayList<Bid> bids = new ArrayList<Bid>();
     
     /**
@@ -181,6 +182,21 @@ public class Auction {
     public void addBid(Bid e) {
         this.bids.add(e);
     }
+    
+    /**
+     * 
+     * @param bids Lista de bids
+     */
+    public void addBidSignedEncrypted(byte[] bid) {
+        this.bids_signed_encrypted.add(bid);
+    }
+
+    
+    public ArrayList<byte[]> getBids_signed_encrypted() {
+        return bids_signed_encrypted;
+    }
+    
+    
     
     
     

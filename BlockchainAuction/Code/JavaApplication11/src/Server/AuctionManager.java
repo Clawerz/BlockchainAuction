@@ -1,4 +1,7 @@
 package Server;
+import Auction.Auction;
+import Auction.Bid;
+import Client.SecurityClient;
 import com.google.gson.Gson;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -7,6 +10,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -30,6 +34,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import sun.security.util.IOUtils;
 
 /**
  *
@@ -53,7 +58,6 @@ public class AuctionManager {
     private static PublicKey pubRepo = null;
     private static boolean agreement = false;
     private static boolean clientAgreement = false;
-
    
     //Client ID
     private static int clientID=0;
@@ -289,7 +293,44 @@ public class AuctionManager {
                     }
                                         
                     break;
-        
+                    
+            case "decrypt":
+                    JSONArray encrypted = msg.getJSONArray("Sign");
+                    byte[] decrypted = SecurityManager.decryptMsg(kp.getPublic(), gson.fromJson(encrypted.toString(), byte[].class));
+                    String sendDecrypted = gson.toJson(decrypted);
+                    messageRepository(serverSocket,new JSONObject("{ \"Type\":\"decrypt\",\"decrypt\":"+sendDecrypted+"}"));
+                    break;
+                    
+            case "bid":
+                    double amount = msg.getDouble("Amount");
+                    System.out.println(amount);
+                    
+                    //Receber chave simétrica
+                    byte[] receiveHighest = new byte[64000];
+                    DatagramPacket receivePacketHighest = new DatagramPacket(receiveHighest, receiveHighest.length);
+                    serverSocket.receive(receivePacketHighest);
+                    
+                    //Decriptar
+                    byte[] receivedBytes = receivePacketHighest.getData();
+                    byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                    byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketHighest.getLength()); //Msg igual
+                
+                    //Decriptar mensagem
+                    msgEnc = SecurityRepository.decryptMsgSym(msgEnc, repoKey, IV);
+                    String Highest = new String(msgEnc);
+
+                    JSONObject HighestJSON = new JSONObject(Highest);
+                    int highestBid = HighestJSON.getInt("Highest");
+                    String auctionType = HighestJSON.getString("AuctionType");
+                    
+                    JSONArray datasigned = msg.getJSONArray("Sign");
+                    byte[] signed = gson.fromJson(datasigned.toString(), byte[].class); //Hash
+
+                    String ret = validateBids(amount,signed,auctionType,highestBid);
+                    retJSON = new JSONObject(ret); 
+                    messageRepository(serverSocket,retJSON);
+                    break;
+                    
             case "clientID":
                     newClientID();
                     retJSON = new JSONObject("{ \"Type\":\"clientID\",\"clientID\":"+clientID+"}");
@@ -429,6 +470,31 @@ public class AuctionManager {
         
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length, ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
+    }
+    
+    /**
+     * Valida bids, neste momento apenas verifica se no caso de um leilão ingles a bid é maior que a anterior
+     * 
+     * @param amount Valor da bid
+     * @param signed bid assinada
+     * @return String onde é especificada a bid validada e a sua encriptação ou a não validação da bid
+     */
+    private static String validateBids(double amount, byte[] signed, String auctionType, double lastBid) throws IOException, GeneralSecurityException{
+        //Fazer validações
+        boolean validBid = true;
+        if(auctionType.equals("English")){
+            if(amount<=lastBid) validBid=false;
+        }
+        Gson gson = new Gson();
+        
+        String ret = "";
+        if(validBid){
+            byte[] signedEncrypted = SecurityManager.encryptMsg(signed, kp.getPrivate());
+            String encrypted = ""+gson.toJson(signedEncrypted);
+            ret = "{ \"Type\":\"ret\",\"Message\":Valid,\"Encrypted\":"+encrypted+"}";
+        }
+        else ret = "{ \"Type\":\"ret\",\"Message\":Invalid}";
+        return ret;
     }
 }
 

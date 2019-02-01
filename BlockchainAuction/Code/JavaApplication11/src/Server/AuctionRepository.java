@@ -37,7 +37,10 @@ import org.json.JSONObject;
  * Tem e gera a informação sobre todos os leilões
  */
 public class AuctionRepository {
-
+            
+    //All auctions
+    private static ArrayList<Auction> AuctionList= new ArrayList<>();
+    
     //Client Keys
     private static final ArrayList<PublicKey> clientKeys = new ArrayList<>();
     private static final ArrayList<Certificate> clientCert = new ArrayList<>();
@@ -53,16 +56,26 @@ public class AuctionRepository {
     private static boolean simetricKeyGen = false;
     
     private static int auctionID=0;
+    
     public static void newAuctionID() {
         auctionID++;
     }
+    
     //Client ID
     private static int clientID=0;
     public static void newClientID() {
          clientID++;
     }
+    
+    public static void newAuctionList(){
+        AuctionList= new ArrayList<>();
+    }
+    
+    
    
     public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, GeneralSecurityException, InterruptedException {
+        
+        newAuctionList();
         
         //Cria par de chaves 
         kp = SecurityRepository.generateKey();
@@ -70,9 +83,6 @@ public class AuctionRepository {
         //Criar certificado
         X509Certificate cert = SecurityRepository.generateCert(kp,"CN=Server_Repository, L=Aveiro, C=PT", 100, "SHA1withRSA");
         //SecurityManager.printCertificateSpecs(cert);
-        
-        //All auctions
-        ArrayList<Auction> AuctionList= new ArrayList<>();
 
         DatagramSocket serverSocket = new DatagramSocket(9876);
         
@@ -112,9 +122,9 @@ public class AuctionRepository {
               ReceivedMsg = new String(receivedBytes);
               //System.out.println(ReceivedMsg);
             }
-          
+            
             JSONObject recMsg = new JSONObject(ReceivedMsg);
-            ComputeMessageType(serverSocket,AuctionList,recMsg,ClientIP, ClientPort,cert);
+            ComputeMessageType(serverSocket,recMsg,ClientIP, ClientPort,cert);
 
         }
     }
@@ -150,7 +160,7 @@ public class AuctionRepository {
      * @throws IOException 
      */
     
-    private static void ComputeMessageType(DatagramSocket serverSocket,ArrayList<Auction> AuctionList, JSONObject msg, InetAddress ClientIP, int ClientPort, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, GeneralSecurityException, InterruptedException{
+    private static void ComputeMessageType(DatagramSocket serverSocket, JSONObject msg, InetAddress ClientIP, int ClientPort, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, GeneralSecurityException, InterruptedException{
         
         String type = msg.getString(("Type"));
         String retMsg="";
@@ -244,6 +254,55 @@ public class AuctionRepository {
                 
             case "tta" : 
                 
+                JSONObject toClient = new JSONObject();
+                JSONArray toClientJSON = new JSONArray();
+
+                //Pedir ao repo para desencriptar todos os bids
+                //Validar a assinatura de todos os bids
+                //Mandar ao cliente todos os bids feitos e seus autores
+                for(int i=0; i<AuctionList.size();i++){
+                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID")) {
+                        for(int j=0; j<AuctionList.get(i).getBids_signed_encrypted().size();j++){
+                            
+                            //Para cada bid enviar uma mensagem a pedir para ser desencriptada
+                            retMsg=""+gson.toJson( AuctionList.get(i).getBids_signed_encrypted().get(j));
+                            retJSON = new JSONObject("{ \"Type\":\"decrypt\",\"Sign\":"+retMsg+"}");
+                            messageManager(serverSocket,retJSON);
+                            
+                            //Receber bid desencriptada
+                            byte[] receiveDecrypted = new byte[32768];
+                            DatagramPacket receivePacketDecrypted = new DatagramPacket(receiveDecrypted, receiveDecrypted.length);
+                            serverSocket.receive(receivePacketDecrypted);
+                            
+                            //Decriptar
+                            byte[] receivedBytes = receivePacketDecrypted.getData();
+                            byte[] IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                            byte[] msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketDecrypted.getLength()); //Msg igual
+
+                            //Decriptar mensagem
+                            msgEnc = SecurityRepository.decryptMsgSym(msgEnc, managerKey, IV);
+                            String ReceivedMsg = new String(msgEnc);
+                            JSONObject decrypted = new JSONObject(ReceivedMsg);
+                            JSONArray encrypted = decrypted.getJSONArray("decrypt");
+                            byte[] signedMessage = gson.fromJson(encrypted.toString(), byte[].class);
+                            
+                            //byte[] signedMessage = gson.fromJson(decrypted.toString(), byte[].class);
+                            String dataFromSignature = ",\"AuctionID\":"+AuctionList.get(i).getAuctionID()+",\"Amount\":"+AuctionList.get(i).getBids().get(j).getValue()+",\"ClientID\":"+AuctionList.get(i).getBids().get(j).getClientID()+"}";
+                            //Validar assinatura
+                            if(SecurityRepository.verifySign(signedMessage, dataFromSignature.getBytes(), clientCert.get(clientID-1))){
+                                if(AuctionList.get(i).isEnglishAuction()){
+                                    toClient.put("Valor",AuctionList.get(i).getBids().get(j).getValue());
+                                    toClient.put("Cliente",AuctionList.get(i).getBids().get(j).getClientID());
+                                }else{
+                                    toClient.put("Valor",AuctionList.get(i).getBids().get(j).getValue());
+                                }
+                                System.out.println("Bid validada");
+                            }
+                            toClientJSON.put(toClient);
+                        }
+                    }
+                }
+                
                 //Terminar leilão
                 boolean found = false;
                 double value = 0;
@@ -267,7 +326,7 @@ public class AuctionRepository {
                     }
                  }
                 
-                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+found+"}");
+                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+toClientJSON.toString()+"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
@@ -466,8 +525,8 @@ public class AuctionRepository {
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 String ReceivedMsg = new String(msgEnc);
-                msg = new JSONObject(ReceivedMsg);
-                
+                JSONObject msg3 = new JSONObject(ReceivedMsg);
+                                
                 //Listar todos os leilões ativos
                 retMsg="";
                 
@@ -498,15 +557,49 @@ public class AuctionRepository {
                 //Decriptar mensagem
                 msgEnc = SecurityRepository.decryptMsgSym(msgEnc, clientSecret.get(clientID-1), IV);
                 ReceivedMsg = new String(msgEnc);
-                msg = new JSONObject(ReceivedMsg);                
-                for(int i=0; i<AuctionList.size();i++){
-                    if(AuctionList.get(i).getAuctionID() == msg.getInt("AuctionID"))
-                    {
-                        AuctionList.get(i).addBid(new Bid(msg.getDouble("Amount"),msg.getInt("ClientID")));
+                System.out.println(ReceivedMsg);
+                
+                //Manda Bid para o Manager verificar a bid
+                JSONObject msg2 = new JSONObject(ReceivedMsg);
+                messageManager(serverSocket,msg2);
+                
+                ReceivedMsg = "{ \"Type\":\"bid\",\"Highest\":"+getHighest(msg2.getInt("AuctionID"))+",\"AuctionType\":"+getAuctionType(msg2.getInt("AuctionID"))+"}";
+                JSONObject msg4 = new JSONObject(ReceivedMsg);
+                messageManager(serverSocket,msg4);
+                
+                //Esperar validação do manager
+                byte[] receivebufferBidValid = new byte[32768];
+                DatagramPacket receivePacketBidValid = new DatagramPacket(receivebufferBidValid, receivebufferBidValid.length);
+                serverSocket.receive(receivePacketBidValid);
+                
+                //Decriptar
+                receivedBytes = receivePacketBidValid.getData();
+                IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
+                msgEnc = Arrays.copyOfRange(receivedBytes, 16, receivePacketBidValid.getLength()); //Msg igual
+                
+                //Decriptar mensagem
+                msgEnc = SecurityRepository.decryptMsgSym(msgEnc, managerKey, IV);
+                ReceivedMsg = new String(msgEnc);
+                
+                JSONObject receivedValid = new JSONObject(ReceivedMsg);
+                String validBid = receivedValid.getString("Message");
+                System.out.println(receivedValid.toString());
+                if(validBid.equals("Valid")){
+                    for(int i=0; i<AuctionList.size();i++){
+                        if(AuctionList.get(i).getAuctionID() == msg2.getInt("AuctionID"))
+                        {
+                            AuctionList.get(i).addBid(new Bid(msg2.getDouble("Amount"),msg2.getInt("ClientID")));
+                            JSONArray datasigned = receivedValid.getJSONArray("Encrypted");
+                            byte[] signed = gson.fromJson(datasigned.toString(), byte[].class); //Hash
+                            AuctionList.get(i).addBidSignedEncrypted(signed);
+                        }
                     }
-                }
-                //Devolver mensagem
-                retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");
+                    //Devolver mensagem
+                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");
+                }else{
+                    //Devolver mensagem
+                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Invalid bid!\"}");
+                }  
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
                 
@@ -664,7 +757,7 @@ public class AuctionRepository {
         serverSocket.receive(receivePacket);
         String ReceivedMsg = new String(receivePacket.getData());
         JSONObject recMsg = new JSONObject(ReceivedMsg);
-        System.out.println("\nServer : " + recMsg.toString());
+        System.out.println("Server : " + recMsg.toString());
         String type = recMsg.getString(("Type"));
         if(type.equals("cert_server")){
            String msg = recMsg.getString(("Message"));
@@ -700,5 +793,39 @@ public class AuctionRepository {
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         serverSocket.send(sendPacket);
     }
+
+    /**
+     * Função que devolve maior bid feita num leilão
+     * 
+     * @param AuctionID ID do leilão a verificar
+     * @return maior bid
+     */
+    public static double getHighest(int AuctionID) {
+        double highestBid = 0;
+        for(int i=0; i<AuctionList.size();i++){
+            if(AuctionList.get(i).getAuctionID() == AuctionID){      
+                for(int j=0; j<AuctionList.get(i).getBids().size();j++)
+                    if(AuctionList.get(i).getBids().get(j).getValue()>highestBid) highestBid = AuctionList.get(i).getBids().get(j).getValue(); 
+            }
+        }  
+        return highestBid;
+    }
+    
+    /**
+     * Função que devolve tipo de um leilão
+     * 
+     * @param AuctionID ID do leilão a verificar
+     * @return tipo do leilão
+     */
+    public static String getAuctionType(int AuctionID) {
+        String type = "Blind";
+        for(int i=0; i<AuctionList.size();i++){
+            if(AuctionList.get(i).getAuctionID() == AuctionID){      
+                if(AuctionList.get(i).isEnglishAuction()) type = "English";
+            }
+        }  
+        return type;
+    }
+    
 }
 
