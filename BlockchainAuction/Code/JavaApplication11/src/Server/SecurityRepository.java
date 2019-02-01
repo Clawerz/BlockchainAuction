@@ -8,6 +8,7 @@ import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Principal;
@@ -20,6 +21,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import javax.crypto.Cipher;
@@ -232,5 +234,24 @@ public class SecurityRepository {
         }
         return false;
     }
+    
+    static byte[] hash(byte[] data) throws NoSuchAlgorithmException{
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        byte[] digest = messageDigest.digest(data);
+        
+        return digest;
+    }
+    
+    static boolean verifyHash(byte[] data, byte[] hash) throws NoSuchAlgorithmException{
+        //Assinar chave
+        MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
+        byte[] digest = messageDigest.digest(data);
+        System.out.println("digest "+Arrays.toString(digest));
+        System.out.println("hash" +Arrays.toString(hash));
+        if(Arrays.equals(digest, hash)) return true;
+        return false;
+    }
+    
+    
 
 }

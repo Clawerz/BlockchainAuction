@@ -201,6 +201,7 @@ public class Client {
                                     else{
                                         System.out.print("\nLeilão terminado com sucesso.");
                                         System.out.println(rec.getJSONArray("SUCCESS"));
+                                        System.out.println(rec.getJSONArray("Chain"));
                                     }
                                 break;
                             }

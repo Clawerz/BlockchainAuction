@@ -1,6 +1,7 @@
 package Auction;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 /**
  * Auction class
@@ -19,6 +20,7 @@ public class Auction {
     private Bid winnerBid;
     private ArrayList<byte[]> bids_signed_encrypted = new ArrayList<byte[]>();
     private ArrayList<Bid> bids = new ArrayList<Bid>();
+    private LinkedList<byte[]> blockChain = new LinkedList<byte[]>();
     
     /**
      * Construtor de um leilão
@@ -195,10 +197,17 @@ public class Auction {
     public ArrayList<byte[]> getBids_signed_encrypted() {
         return bids_signed_encrypted;
     }
+
+    public LinkedList<byte[]> getBlockChain() {
+        return this.blockChain;
+    }
     
-    
-    
-    
-    
+    /**
+     * 
+     * @param bids Lista de bids
+     */
+    public void addChain(byte[] hash) {
+        this.blockChain.add(hash);
+    }
     
 }

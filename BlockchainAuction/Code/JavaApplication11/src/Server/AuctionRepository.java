@@ -256,6 +256,8 @@ public class AuctionRepository {
                 
                 JSONObject toClient = new JSONObject();
                 JSONArray toClientJSON = new JSONArray();
+                JSONObject toClient2 = new JSONObject();
+                JSONArray toClientJSON2 = new JSONArray();
 
                 //Pedir ao repo para desencriptar todos os bids
                 //Validar a assinatura de todos os bids
@@ -298,8 +300,8 @@ public class AuctionRepository {
                                 }
                                 System.out.println("Bid validada");
                             }
-                            toClientJSON.put(toClient);
                         }
+                        toClientJSON.put(toClient);
                     }
                 }
                 
@@ -326,8 +328,25 @@ public class AuctionRepository {
                     }
                  }
                 
-                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+toClientJSON.toString()+"}");
+                //De seguida mandar verificação da blockchain
+                for(int i=0; i<AuctionList.size();i++){
+                    for(int j=AuctionList.get(i).getBlockChain().size()-1; j>0; j--){
+                        String list = AuctionList.get(i).getBids().toString();
+                        AuctionList.get(i).getBids().remove(j);
+                        if(SecurityRepository.verifyHash(AuctionList.get(i).getBids().toString().getBytes(), AuctionList.get(i).getBlockChain().get(j))){
+                            System.out.println("Verifica"+j);
+                            toClient2.put("Lista",list);
+                            toClient2.put("Chain",AuctionList.get(i).getBlockChain().get(j));
+                        }
+                        toClientJSON2.put(toClient2);
+                    }         
+                }
+                
+                retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+toClientJSON.toString()+", \"Chain\":"+toClientJSON2.toString()+"}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
+                
+                
+                
                 break;
                 
             case "gba" : 
@@ -588,10 +607,15 @@ public class AuctionRepository {
                     for(int i=0; i<AuctionList.size();i++){
                         if(AuctionList.get(i).getAuctionID() == msg2.getInt("AuctionID"))
                         {
-                            AuctionList.get(i).addBid(new Bid(msg2.getDouble("Amount"),msg2.getInt("ClientID")));
+                            //Adicionar á blockChain
+                            byte[] hash = SecurityRepository.hash(AuctionList.get(i).getBids().toString().getBytes());
+                            AuctionList.get(i).addChain(hash);
+                            
+                            Bid b = new Bid(msg2.getDouble("Amount"),msg2.getInt("ClientID"));
+                            AuctionList.get(i).addBid(b);
                             JSONArray datasigned = receivedValid.getJSONArray("Encrypted");
                             byte[] signed = gson.fromJson(datasigned.toString(), byte[].class); //Hash
-                            AuctionList.get(i).addBidSignedEncrypted(signed);
+                            AuctionList.get(i).addBidSignedEncrypted(signed); 
                         }
                     }
                     //Devolver mensagem
