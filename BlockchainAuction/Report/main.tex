@@ -50,11 +50,11 @@
 \begin{center}
 
 
-\textsc{\large Security 2018/2019\\[2cm]}
+\textsc{\large Segurança 2018/2019\\[2cm]}
 
-{ \huge \bfseries Auction System \\[4cm]
+{ \huge \bfseries Sistema de Leilões \\[4cm]
 
-\textsc{\small{8240 - INTEGRATED MASTER IN COMPUTER ENGINEERING AND TELEMATICS}}\\[2cm]
+\textsc{\small{8240 - MESTRADO INTEGRADO EM ENGENHARIA COMPUTADORES E TELEMÁTICA}}\\[2cm]
 }
 \end{center}
 
@@ -70,7 +70,7 @@ Filipe Reis
 
 \begin{flushright} \large
 Carlos Ribeiro
-\small{\\NMec: 76771}
+\small{\\NMec: 71945}
 \small{carlosfiliperibeiro@ua.pt}
 \end{flushright}
 \end{minipage}\\[1cm]
@@ -78,13 +78,14 @@ Carlos Ribeiro
 \vfill
 
 \begin{center}
+\textsc{ Grupo P3G2\\[1cm]}
 \textsc{\large 16 November 2018\\[2cm]}
 \end{center}
 
 
 
 
-
+\renewcommand*\contentsname{Conteúdos}
 %Conteúdos, dar paragrafo
 \tableofcontents
 
@@ -93,85 +94,165 @@ Carlos Ribeiro
 
 \clearpage
 
-\section{Introduction}
+\section{Introdução}
 
-The purposed project is called "Blockchain-based auction management". The main goal is to build an auction manager safe, to that we will implement a set of security policies, for example, protect the messages exchanged between the different entities, identify a bid author with CC, validate a receipt of each bid, etc. A auction can have different bidding types, for example, an English or blind auction. The first one is based on the current bid to be higher than the last one. The second one in bidding without knowing what the other clients do, who has bid higher wins the auction. In our solution, we are going to use an English auction style.
+Foi nos proposto como projeto da cadeira de Segurança, realizar um sistema de gestão de leilões com blockchain. A segurança destes sistemas é muito importante, porque os clientes querem saber que um leilão foi justo, por exemplo quem ganhou um leilão foi o cliente que fez a licitação maior, que as bids não foram alteradas, ou que houve algum tipo de intruso. Para desenvolver um sistema seguro foram tomadas várias medidas de segurança que vão ser referidas nos pontos a seguir.
 
 \newpage
-\section{Requirements}
+\section{Requirementos}
 
-The system requires:
+O sistema precisa:
 
 \begin{itemize}
-\item \textbf{Bids confidentiality, integrity and authentication.} Bids cannot be modified or forged.
-\item \textbf{Bid acceptance control and confirmation.} Bids are only accepted if they fulfill the English auction style. 
-\item \textbf{Bid author identity and anonymity.} Bids are linked to users by their CC, however they shall remain anonymous until the end of a auction.
-\item \textbf{Honesty assurance.} The auction repository shall have access to all the information about the bids, but shall not be able to act differently according with the client.
+\item \textbf{Confidencialidade, integridade e autenticação de licitações} Os bids não podem ser modificados ou alterados de alguma maneira.
+\item \textbf{Aceitação e confirmação de licitações} Os bids apenas podem ser aceitados, caso estejam de acordo com um conjunto de parameteros.
+\item \textbf{Identidade e anonimato da identidade dos autores das licitações} Os bids estão ligados aos utilizadores, e devem permanecer sempre anonimos até ao fim de um leilão.
+\item \textbf{Certeza de honestidade} Apesar dos servidores, terem acesso a muitas informações sobre os bids, deve ser garantida a honestidade dos mesmos.
 \end{itemize}
 
 \vskip 2cm
-\section{System Components}
+\section{Componentes de um sistema}
 
-The system will be based in 3 parts, which are :
+O sistema é baseado em 3 partes : 
 
 \begin{itemize}
-\item \textbf{Auction Manager} Server where all the information will be managed and sent to their place.
-\item \textbf{Auction Repository} Server with all the information about the auctions. 
-\item \textbf{Clients} Normal auction client that is able to do a set of instructions.
+\item \textbf{Auction Manager} Servidor para a manutenção dos bids.
+\item \textbf{Auction Repository} Servidor com toda a informação sobre sobre os leilões.
+\item \textbf{Clients} Cliente com acesso a um conjunto reservado de operações possíveis.
 \end{itemize}
 
 \newpage
-\section{Mechanisms}
+\section{Mecanismos}
 \vskip 1cm
-\subsection{Key Distribuition}
-In order for the client communicate with the Auction Manager, and the Manager communicate with the Auction Repository the pairs have to agree a key.\\
+\subsection{Distribuição de chaves}
+Para o caso das chaves assimétricas era informado que cada servidor já possuia um par de chaves, no nosso caso foi escolhido RSA.
 
-Diffie-Hellman is the algorithm we found to do the key agreement, it creates a safe channel between two peers in such a way that the secret can't be seen by observing the communication.
+\vskip 0.9cm
+\subsection{Chaves simétricas}
+Para o caso das chave simétricas é gerada uma chave com AES que depois é enviada, para os servidores.
 
-\vskip 1.5cm
-\subsection{Cipher}
-Our system is goign to use symetric block ciphers.\\
+\vskip 0.9cm
+\subsection{Cifras}
+O nosso sistema uma para cifras assimatricas RSA, com recurso as chaves obtidas com os certificados.
+Já para o caso das cifras simétricas que são as mais usadas, é usado AES em modo GCM, foi escolhido AES, devido á sua alta compatibildiade e segurança, como modo foi usado GCM devido á sua alta performance e ao ataque á questão de autenticação que tambem é feita com o uso deste modo.
 
-For that we are using AES algorithm with Cipher Block Chaining (CBC) mode.
+\vskip 0.9cm
+\subsection{Autenticação}
+O caso da autenticação é resolvido através do uso de GCM, pelo que não é necessário mais nada para alem disto.
 
-\vskip 1.5cm
-\subsection{Message Authentication Codes}
-Message authentication codes(MAC) are used to provide information integrity and authenticity. A MAC is calculated with a key and the message we want to authenticate.
+\vskip 0.9cm
+\subsection{Assinaturas}
+As assinaturas foram feitas com SHA256 e RSA, havendo sido SHA 256 devido ao equilibrio entre performance e segurança.
 
-\vskip 1.5cm
-\subsection{Signatures}
-We need to be able to ensure a message authenticity, MAC helps with it but it does not completely solves the problem, so we are also going to use signatures in order to do it.
+\vskip 0.9cm
+\subsection{Certificados}
+Os certificados a serem gerados, pertecem aos servidores, e estes devem gerar um self-signed certificate, para isto foi adaptada uma função encontrada na internet, estando presente no código a sua fonte.
 
-\vskip 1.5cm
-\subsection{Certificates}
-A digital certificate allows other parties to rely on signatures made about the private key that corresponds to the certified public key. This will be used to validate signatures.
-
-\vskip 3cm
-\section{Working pipeline}
-
+\newpage
+\section{Satisfação dos requirementos}
 \vskip 1cm
-\subsection{Establish a session}
-All the messages are going to be encrypted using AES, they are also going to have an associated MAC, to that the server and the client must agree a shared key by both, this is where Diffie-Hellman algorithm enters in action by making the key agreement.
+\subsection{Certificação de servidores e de clientes}
+Os clientes querem ter sempre a certeza que estão a trocar informações com o sistema desenvolvido e não com outro sistema a fazer passar-se pelo sistema implementado. Como tal, cada servidor fornece um certificado a cada cliente e entre servidores, fornecendo por consequência a sua chave pública.
+Para um leilão acontecer sem problemas quanto à identificação do cliente, é pedido ao cliente em algumas situações para se autenticar com o cartão de cidadão, é trocado o certificado do cartão do cidadão com os servidores para os servidores poderem confiar na autenticação do cliente.
+No final da troca de certificados, é possível trocar mensagens encriptadas entre todos os sistemas com recurso a chaves assimétricas e encriptação com RSA, no entanto, esta troca de mensagens é bastante mais lenta que a troca com encriptação simétrica, como nós queremos que a troca seja o mais rápida possível isto leva-nos ao seguinte ponto.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=17.0cm]{cert.png}
+    \caption{Código relativo á troca de certificados.}
+    \label{fig:mesh1}
+\end{figure}
+
+\newpage
+\subsection{Troca de mensagens cifradas}
+Como visto anteriormente a maneira mais rápida de trocar mensagens cifradas é através de encriptação simétrica, para isso é necessário os sistemas acordarem uma chave simétrica, isto ocorre imediatamente após a troca de certificados, é gerada uma chave simétrica com AES, uma vez gerada, é necessário transmitir a mensagem para o seu par, para isso é então assinada e encriptada a chave simétrica, a assinatura é feita com SHA-256 que é um algoritmo de hash ainda não quebrado, tornando-se assim uma das hash functions mais fortes existentes, já a encriptação é feita com RSA com recurso à chave privada sendo depois no seu par verificada a assinatura e decriptada com a chave pública obtida através do certificado previamente trocado. 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=15.0cm]{key.png}
+    \caption{Produção de chaves simétricas.}
+    \label{fig:mesh1}
+\end{figure}
+
+Uma vez com as chaves simétricas acordadas, é usado AES em modo GCM(Galois/Counter Mode), foi escolhido este modo, devido à sua eficiência e performance e também devido a atacar já um novo problema, que é a necessidade de autenticação entre os sistemas.
+Apesar de difícil continua a ser possível ataques de brute-force de modo á tentativa de descobrimento da chave simétrica, de modo a reduzir ainda mais essa remota possibilidade, sempre que é encriptada uma mensagem é gerado um novo IV com o recurso a um CSPNRG (cryptographically secure pseudo-random number generator).
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=15.0cm]{encrypt.png}
+    \caption{Código relativo á troca encriptação e decriptação simétrica.}
+    \label{fig:mesh1}
+\end{figure}
 
 \vskip 1.5cm
-\subsection{Message exchange}
-Once the session is established to send a message it must be ciphered with the key provided by Diffie-Hellman algorithm, after that it is calculated his MAC with the messaged already encrypted, we do that to save resources, and finally it is sent, once received on the server side, the MAC is validated, if it is valid than it is deciphered with the same key.
-As this system is based in a blockchain and we need to be able to order the bids, each bid will be encrypted with the last one hash.
+\subsection{Autenticação e controlo de integridade}
+Como já vimos anteriormente, a solução que vimos de modo a resolver este problema, foi a utilização de GCM.
 
 \vskip 1.5cm
-\subsection{Client}
-In order to be able to authenticate a message, signatures shall be used, as CC uses PKCS1 we are also going to use that algorithm.
-A certificate shall be exchanged between client and server so server knows he can trust client, CC uses asymmetric keys,RSA, so server shall also use it.
+\subsection{Proteção dos bids até ao final do leilão}
+É extremamente importante manter a proteção dos bids até ao final do leilão, para isso quando o cliente deseja fazer um bid, ele procede à assinatura do mesmo e envia para o repositório, que por sua vez envia para o manager, o manager procede à validação do bid e uma vez validado encripta o bid  com uma chave que apenas ele possui, fazendo com que apenas ele possa desencriptar o bid, e devolve o mesmo ao repositório, que por sua vez adicionar à lista de bids do leilão desejado.
+No fim do leilão, o repositório procede ao pedido de desencriptação do mesmo pelo manager, o manager faz-lo, e no fim envia ao repositório, que agora já com o bid desencriptado pode verificar a assinatura do bid, garantindo que não houve alguma alteração do mesmo, pois caso tivesse havido, a validação da assinatura falharia.
 
 \vskip 1.5cm
-\subsection{Receipts}
-To create a receipt, the bid shall pass by a hash function, than concatenated with a time stamp and than pass again by a hash function, after all that it is ciphred with the authentication key from CC.
+\subsection{Identificação do autor de um bid através do seu CC}
+De modo a garantir a identificação e não repudiação de um bid, sempre que um cliente tem de fazer uma bid, ele deve assinar o mesmo, a assinatura é feita com o recurso a SHA256withRSA, sendo usada a chave privada do cliente para assinar, no fim do leilão as bids são verificadas de modo a garantir que não houve qualquer alteração do mesmo, o que nos leva ao seguinte ponto.
+
+\vskip 1.5cm
+\subsection{Exposição dos bids necessários no fim de um leilão}
+No fim de um leilão devem ser revelados todos os bids e seus autores para o caso de um leilão inglês e apenas os bids para o caso de um leilão cego, no momento da revelação dos bids, são então verificadas todas as assinaturas, sendo todas as assinaturas verificadas com sucesso, são então dependendo do tipo de leilão remetidos para o cliente as informações necessárias.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=17.0cm]{expose.png}
+    \caption{Validação de bids.}
+    \label{fig:mesh1}
+\end{figure}
+
+\newpage
+\vskip 1.5cm
+\subsection{Validação dos bids}
+A validação dos bids como já visto, é feita pelo manager, esta validação deve ser dinâmica, e inicialmente deveria ser validado o caso de um leilão já ter terminado ou não e as regras básicas relativas a um leilão, que no caso de ser um leilão inglês, apenas exige que o valor da bid seja maior que a maior bid já feita, já no caso de um leilão cego, são todos os valores de bids aceitos.
+A parte da validação das regras básicas dos leilões foi concluída com sucesso, no entanto por alguma falta de tempo não foi possível a realização de outras validações, quer sejam relacionadas com o tempo ou com permissões específicas para cada utilizador.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=17.0cm]{valid.png}
+    \caption{Validação de bids.}
+    \label{fig:mesh1}
+\end{figure}
+
+\subsection{Modificação de bids validados}
+É dada ao manager a possibilidade de encriptação ou desencriptação do bid, no entanto no fim do leilão deve ser possível provar que não houve alteração do mesmo por parte do manager, isto foi de novo feito através de assinaturas, uma bid assinada nunca pode ser alterada, ou será automaticamente invalidada, logo se o manager ou outra qualquer entidade mudar algo acerca da bid, isto faz automaticamente que a assinatura deixe de ser válida o que impossibilita a possibilidade de prova da não alteração dos bids no momento do término de um leilão.
+
+\subsection{Construção de um blockchain por leilão}
+Era pedido a construção de uma blockchain para as bids de cada leilão de modo a garantir, que as bids não eram trocadas de ordem, para a implementação disso foi para leilão criada uma lista ligada ordenada, onde no momento da adição de cada bid, era adicionada a hash da lista de bids antes da inserção da nova bid, o que invalida a troca das bids, pois cada nova inserção, vai “selar” inserção prévia.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=15.0cm]{blockchain.png}
+    \caption{Produção da blockchain.}
+    \label{fig:mesh1}
+\end{figure}
+
+\newpage
+\subsection{Criptopuzzles}
+Como em todos os sistemas os clientes podem fazer ações desnecessárias que ocupam os servidores, para esse problema foi implementado nas licitações os criptopuzzles. Os criptopuzzles fazem com que os clientes demorem mais tempo a fazer uma licitação com um proof of work. O proof of work consiste em descobrir um número random enviado pelo servidor, quando o cliente descobre o número envia de volta o resultado e caso seja realmente o número gerado, é lhe dado o direito de fazer uma licitação.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=8.0cm]{puzzle.png}
+    \caption{Resolução de um puzzle enviado pelo servidor.}
+    \label{fig:mesh1}
+\end{figure}
+
+\newpage
+\vskip 1.5cm
+\subsection{Recibos}
+Para manter a transparência do leilão é enviado um recibo por cada licitação, isto permite um cliente reclamar se houver algum problema na escolha do vencedor. O servidor ao receber uma licitação e depois da validação dessa, envia o recibo com assinado com a sua chave privada. O cliente pode verificar um recibo com a chave pública do servidor.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=17.0cm]{receipt.png}
+    \caption{Produção de um recibo.}
+    \label{fig:mesh1}
+\end{figure}
 
 
 \newpage
-\section{Conclusion}
-We have found some points that we haven't understood, like how Cryptopuzzles or Certificates will work on this project.
-Although, we haven't thought properly what and how we are going to develop this project, we already have a very basic ideia and we believe we will be able to conclude this project sucessfully.
+\section{Conclusão}
+Com o desenvolvimento deste projeto foi possível pôr em prática os conhecimentos aprendidos na cadeira de Segurança. O objetivo principal foi concluído com sucesso, procedendo à implementação de políticas de segurança no sistema de gestão de leilões, no entanto devido á pressão de outras cadeiras, não foi possível otimizar o código nem fazer tudo o que havia sido planeado, sendo por exemplo a utilização do tempo uma das coisas que foi deixada para trás.
 
 
 
