@@ -42,13 +42,13 @@ import org.json.JSONObject;
 
 public class AuctionManager {
     
-    //Client Keys
+    //Variavéis referentes aos Clientes
     private static final ArrayList<PublicKey> clientKeys = new ArrayList<>();
     private static final ArrayList<Certificate> clientCert = new ArrayList<>();
     private static final ArrayList<SecretKey> clientSecret = new ArrayList<>();
     private static KeyPair kp;
     
-    //Manager
+    //Variavéis referentes ao Manager
     private static Certificate repoCert = null;
     private static SecretKey repoKey = null;
     private static PublicKey pubRepo = null;
@@ -56,6 +56,7 @@ public class AuctionManager {
     private static boolean clientAgreement = false;
     private static byte[] initializationVectorBid = new byte[16];
    
+    //Variáveis auxiliares
     private static SecretKey bidEncrypt = null;
     
     //Client ID
@@ -133,36 +134,12 @@ public class AuctionManager {
     
     /**
      * Dependendo do tipo de mensagem recebida executa o pedido pela mesma.Tipos de mensagens 
-    <ul>
-    <li>init - Troca de certificados</li>
-    <li>cta - Criar leilão</li>
-    <li>tta - Terminar leilão</li>
-    <li>gba - Ver bids feitos em um leilão</li>
-    <li>gbc - Ver bids feitos por um cliente</li>
-    <li>lga - Listar todos os leilões ativos</li>
-    <li>lta - Listar todos os leilões inativos</li>
-    <li>coa - Ver resultado de um leilão</li>
-    <li>vlr - Validar recibo</li>
-    <li>rct - Reposta do Repositório a criar leilão</li>
-    <li>rtt - Reposta do Repositório a terminar leilão</li>
-    <li>rgb - Reposta do Repositório a ver bids feitos em um leilão</li>
-    <li>rgc - Reposta do Repositório a ver bids feitos por um cliente</li>
-    <li>rlg - Reposta do Repositório a listar todos os leilões ativos</li>
-    <li>rlt - Reposta do Repositório a listar todos os leilões inativos</li>
-    <li>rco - Reposta do Repositório a ver resultado de um leilão</li>
-    <li>rvl - Reposta do Repositório a validar recibo</li>
-    <li>end - Terminar tudo</li>
-        </ul>
      * 
      * @param ClientIP IP do cliente
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param msg Mensagem a ser interpretada
      * @param cert Certificado
-     * @throws IOException 
-     * @throws java.net.UnknownHostException 
-     * @throws java.security.cert.CertificateEncodingException 
-     * @throws java.security.KeyStoreException 
      */
     private static void ComputeMessageType(InetAddress ClientIP, int ClientPort, DatagramSocket serverSocket, JSONObject msg, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException, GeneralSecurityException{
         String type = msg.getString(("Type"));
@@ -402,8 +379,6 @@ public class AuctionManager {
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param msg Mensagem a enviar ao cliente
-     * @throws UnknownHostException
-     * @throws IOException 
      */
     private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException, GeneralSecurityException{
         byte[] sendbuffer;
@@ -439,9 +414,6 @@ public class AuctionManager {
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param cert Certificado do servidor
-     * @throws UnknownHostException
-     * @throws IOException 
-     * @throws java.security.cert.CertificateEncodingException 
      */
     private static void messageClientCert(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         byte[] sendbuffer;
@@ -455,9 +427,6 @@ public class AuctionManager {
      * 
      * @param clientSocket Socket do Manager
      * @param cert Certificado do Manager
-     * @throws java.net.UnknownHostException
-     * @throws IOException
-     * @throws java.security.cert.CertificateEncodingException
      */
     private static void messageRepositoryCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");

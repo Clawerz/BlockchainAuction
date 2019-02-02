@@ -70,9 +70,7 @@ public class AuctionRepository {
     public static void newAuctionList(){
         AuctionList= new ArrayList<>();
     }
-    
-    
-   
+      
     public static void main(String[] args) throws SocketException, IOException, NoSuchAlgorithmException, UnknownHostException, GeneralSecurityException, InterruptedException {
         
         newAuctionList();
@@ -131,33 +129,11 @@ public class AuctionRepository {
     
     /**
      * Dependendo do tipo de mensagem recebida executa o pretendido.
-     * Tipos de mensagens 
-     * <ul>
-        *<li>cta - Criar leilão</li>
-        *<li>tta - Terminar leilão</li>
-        *<li>gba - Ver bids feitos em um leilão</li>
-        *<li>gbc - Ver bids feitos por um cliente</li>
-        *<li>lga - Listar todos os leilões ativos</li>
-        *<li>lta - Listar todos os leilões inativos</li>
-        *<li>coa - Ver resultado de um leilão</li>
-        *<li>vlr - Validar recibo</li>
-        *<li>rct - Reposta do Repositório a criar leilão</li>
-        *<li>rtt - Reposta do Repositório a terminar leilão</li>
-        *<li>rgb - Reposta do Repositório a ver bids feitos em um leilão</li>
-        *<li>rgc - Reposta do Repositório a ver bids feitos por um cliente</li>
-        *<li>rlg - Reposta do Repositório a listar todos os leilões ativos</li>
-        *<li>rlt - Reposta do Repositório a listar todos os leilões inativos</li>
-        *<li>rco - Reposta do Repositório a ver resultado de um leilão</li>
-        *<li>rvl - Reposta do Repositório a validar recibo</li>
-        *<li>end - Terminar tudo</li>
-        </ul>
-     * 
      * @param AuctionList Lista de leilões
      * @param msg Mensagem a ser interpretada
      * @param ClientIP IP do cliente
      * @param ClientPort Número da porta do cliente
-     * @param serverSocket Socket do Auction Repository
-     * @throws IOException 
+     * @param serverSocket Socket do Auction Repository 
      */
     
     private static void ComputeMessageType(DatagramSocket serverSocket, JSONObject msg, InetAddress ClientIP, int ClientPort, X509Certificate cert) throws IOException, UnknownHostException, CertificateEncodingException, CertificateException, GeneralSecurityException, InterruptedException{
@@ -288,7 +264,6 @@ public class AuctionRepository {
                             JSONArray encrypted = decrypted.getJSONArray("decrypt");
                             byte[] signedMessage = gson.fromJson(encrypted.toString(), byte[].class);
                             
-                            //byte[] signedMessage = gson.fromJson(decrypted.toString(), byte[].class);
                             String dataFromSignature = ",\"AuctionID\":"+AuctionList.get(i).getAuctionID()+",\"Amount\":"+AuctionList.get(i).getBids().get(j).getValue()+",\"ClientID\":"+AuctionList.get(i).getBids().get(j).getClientID()+"}";
                             //Validar assinatura
                             if(SecurityRepository.verifySign(signedMessage, dataFromSignature.getBytes(), clientCert.get(clientID-1))){
@@ -344,9 +319,7 @@ public class AuctionRepository {
                 toClientJSON2.put(toClient2);
                 
                 retJSON = new JSONObject("{ \"Type\":\"SUCCESS\",\"SUCCESS\":"+toClientJSON.toString()+", \"Chain\":"+toClientJSON2.toString()+"}");
-                messageClient(ClientIP,ClientPort,serverSocket,retJSON);
-                
-                
+                messageClient(ClientIP,ClientPort,serverSocket,retJSON);                           
                 
                 break;
                 
@@ -489,15 +462,7 @@ public class AuctionRepository {
                 retJSON = new JSONObject("{ \"Type\":\"AuctionOutcome\",\"Message\":\"Operation completed with sucess!\"" + retMsg + "}");
                 messageClient(ClientIP,ClientPort,serverSocket,retJSON);
                 break;
-                
-            case  "vlr":
-                
-                    //Não faz nada por agora, pois ainda não sabemos como validar recibos
-                    //Devolver mensagem
-                    retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Ainda não foi implementado\"}");
-                    messageClient(ClientIP,ClientPort,serverSocket,retJSON);
-                    break;
-                             
+                  
             case "bid":     
                 
                 //Enviar cryptopuzzle
@@ -589,6 +554,7 @@ public class AuctionRepository {
                 byte[] receivebufferBidValid = new byte[30000];
                 DatagramPacket receivePacketBidValid = new DatagramPacket(receivebufferBidValid, receivebufferBidValid.length);
                 serverSocket.receive(receivePacketBidValid);
+                
                 //Decriptar
                 receivedBytes = receivePacketBidValid.getData();
                 IV = Arrays.copyOfRange(receivedBytes, 0, 16); //IV igual
@@ -615,9 +581,8 @@ public class AuctionRepository {
                             AuctionList.get(i).addBidSignedEncrypted(signed); 
                         }
                     }
-                    //Devolver mensagem
-                    //retJSON = new JSONObject("{ \"Type\":\"ret\",\"Message\":\"Operation completed with sucess!\"}");
                     
+                    //Devolver mensagem                    
                     String toSign = ",\"AuctionID\":"+msg2.getInt("AuctionID")+",\"Amount\":"+msg2.getDouble("Amount")+",\"ClientID\":"+msg2.getInt("ClientID")+"}";
                     String signed = ""+gson.toJson(SecurityRepository.sign(toSign.getBytes(), kp));
                     sendMsg = "{ \"Type\":\"Receipt\", \"Sign\":\""+signed+"\""+toSign+"}";
@@ -674,8 +639,6 @@ public class AuctionRepository {
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param msg Mensagem a enviar ao cliente
-     * @throws UnknownHostException
-     * @throws IOException 
      */
     private static void messageClient(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, JSONObject msg) throws UnknownHostException, IOException, GeneralSecurityException{
         byte[] sendbuffer;
@@ -711,9 +674,6 @@ public class AuctionRepository {
      * @param ClientPort Número da porta do cliente
      * @param serverSocket Socket do Auction Manager
      * @param cert Certificado do servidor
-     * @throws UnknownHostException
-     * @throws IOException 
-     * @throws java.security.cert.CertificateEncodingException 
      */
     private static void messageClientCert(InetAddress ClientIP, int ClientPort,DatagramSocket serverSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         byte[] sendbuffer;
@@ -727,9 +687,6 @@ public class AuctionRepository {
      * 
      * @param clientSocket Socket do Cliente
      * @param cert Certificado do Repo
-     * @throws java.net.UnknownHostException
-     * @throws IOException
-     * @throws java.security.cert.CertificateEncodingException
      */
     private static void messageManagerCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
@@ -746,10 +703,6 @@ public class AuctionRepository {
      * 
      * @param clientSocket Socket do Cliente
      * @param managerKey Chave publica do manager
-     * @throws UnknownHostException
-     * @throws java.security.cert.CertificateException
-     * @throws java.security.KeyStoreException
-     * @throws IOException
      */
     private static void initCommunicationManager(DatagramSocket serverSocket, X509Certificate cert) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
         String sendMsg = "{ \"Type\":init_server}";
@@ -791,7 +744,6 @@ public class AuctionRepository {
            }
         }
         
-        //Ver algoritmos a usar
         //Gerar chave simétrica
         if(simetricKeyGen){
             try {

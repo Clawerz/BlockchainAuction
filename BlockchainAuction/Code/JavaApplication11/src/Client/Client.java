@@ -45,6 +45,7 @@ import org.json.*;
  */
 public class Client {
     
+    //Variveis relativas ao cliente e auxiliares
     private static String type = "";
     private static String messageType = "";
     private static String sendMsg = "";
@@ -53,17 +54,16 @@ public class Client {
     private static DatagramPacket receivePacket;
     private static byte[] receivebuffer = new byte[30000];
     private static String serverData;
-    private static JSONObject rec;
-    
+    private static JSONObject rec;  
     private static boolean bid = false;
     private static boolean simetricKeyGen = false;
     
-    //Manager
+    //Variveis relativas ao Manager
     private static SecretKey secretKeyManager = null;
     private static PublicKey managerKey = null;
     private static Certificate managerCert = null;
     
-    //Repository
+    //Variveis relativas ao Repository
     private static SecretKey secretKeyRepository = null;
     private static PublicKey repositoryKey = null;
     private static Certificate repositoryCert = null;
@@ -73,27 +73,34 @@ public class Client {
     public static void main(String[] args) throws SocketException, IOException, KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, GeneralSecurityException {
         
         //Security
+        //Inicia configurações relativas ao CC.
         SecurityClient.init();
+        
+        //Fica á espera de pacotes
         boolean exit = false;
         BufferedReader br =new BufferedReader(new InputStreamReader(System.in));
         InetAddress IP = InetAddress.getByName("127.0.0.1");
         clientSocket = new DatagramSocket();
         byte[] sendbuffer;
+        
+        //Inicia troca de certificados com o servidor
         initCommunicationManager(clientSocket,managerKey);
         initCommunicationRepository(clientSocket,repositoryKey);
         int clientID = 0;
         
-        //Convert to json, cuidado com a maneria como se constroio a mesnagem
+        //Convert to json, cuidado com a maneria como se constroi a mensagem
         sendMsg = "{ \"Type\":\"clientID\"}";
         
         rec = messageManager(clientSocket,sendMsg);
                         
+        //Devolve ID do cliente
         for(int i=1; i < rec.names().length();i++){
             List tmp = rec.names().toList();
             clientID = rec.getInt("clientID");
             System.out.print("\nO seu ID é " + clientID);
         }
         
+        //Lista de tarefas possíveis
         while(!exit)
         {
             String auctionName = "";
@@ -116,6 +123,8 @@ public class Client {
             
             String option = br.readLine();
             switch (option){
+                    
+                    //Cria leilão
                     case "1":
                         messageType = "cta";
                         boolean firstTime = true;
@@ -161,11 +170,13 @@ public class Client {
                                     break;
                             }
                         }
-                        //Convert to json, cuidado com a maneria como se constroio a mesnagem
+                        //Convert to json, cuidado com a maneria como se constroi a menSagem
                         sendMsg = "{ \"Type\":"+messageType+",\"clientID\":"+clientID+",\"Name\":\""+auctionName+ "\",\"Time\":"+auctionTime+",\"AuctionType\":"+auctionType+"}";
                         
+                        //Manda mensagem para o manager com as informações á cerca do leilão a ser criado
                         rec = messageManager(clientSocket, sendMsg);
                         
+                        //Output
                         type = rec.getString(("Type"));
                         switch(type){
                             case "SUCCESS":
@@ -177,7 +188,9 @@ public class Client {
                         }
                         break;
                         
+                    //Termina um leilão ativo
                     case "2":
+                        //Verifica se existem leilões ativos
                         boolean existAuctions = getActiveAuctionsByClient(clientID);
                         
                         if(existAuctions){
@@ -191,10 +204,13 @@ public class Client {
                                     System.out.print("\nERRO! Insira um número!");
                                 }
                             }
+                            
                             sendMsg = "{ \"Type\":"+messageType + ",\"ClientID\":"+clientID + ",\"AuctionID\":"+auctionID+"}";
                             
+                            //Manda mensagem ao repositorio com as informações do leilão a terminar
                             rec = messageRepository(clientSocket,sendMsg);
 
+                            //Output do resultado do termino
                             String type = rec.getString(("Type"));
                             switch(type){
                                 case "SUCCESS":
@@ -211,18 +227,22 @@ public class Client {
                         }
                         break;
                         
+                    //Devolve leilões ativos
                     case "3":
                         getActiveAuctions();
                         break;
-                        
+                    
+                    //Devolve leilões inativos
                     case "4":
                         getInactiveAuctions();
                         break;
-                        
+                    
+                    //Ver licitações de um leilão
                     case "5":
                         existAuctions = false;
                         int optionActiveInactive = 0;
                         
+                        //Escolha entre ativos ou inativos
                         while(optionActiveInactive == 0){
                             System.out.print("\nEscolha entre");
                             System.out.print("\n1-Leilões ativos");
@@ -234,6 +254,8 @@ public class Client {
                                     System.out.print("\nERRO! Insira um número!");
                             }
                         }
+                        
+                        //Devolução dos leiloes do tipo
                         switch (optionActiveInactive){
                             case 1:
                                 existAuctions = getActiveAuctions();
@@ -245,6 +267,7 @@ public class Client {
                                 System.out.print("\nERRO! Opção inválida! De volta ao menu inicial.");
                                 break;
                         }
+                        
                         if(existAuctions){
                             auctionID = 0;
                             while(auctionID == 0){
@@ -257,9 +280,11 @@ public class Client {
                             }
                             messageType = "gba";
                             sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";
-
+                            
+                            //Manda mensagem ao repositorio com a informação sobre o leilão
                             rec = messageRepository(clientSocket,sendMsg);
 
+                            //Output das bids feitas
                             type = rec.getString(("Type"));
                             switch(type){
                                 case "Bids":
@@ -275,8 +300,10 @@ public class Client {
                             }
                         }
                         break;
-                        
+                       
+                    //Ver bids feitos por um cliente
                     case "6":
+                        //ID do cliente 
                         messageType = "gbc";
                         userID = 0;
                         while(userID == 0){
@@ -291,6 +318,7 @@ public class Client {
 
                         rec = messageRepository(clientSocket,sendMsg);
                         
+                        //Output das bids feitas
                         type = rec.getString(("Type"));
                         switch(type){
                             case "Bids":
@@ -306,7 +334,9 @@ public class Client {
                         }
                         break;
                         
+                    //Ver resultado de um leilão
                     case "7":
+                        //Devolve lista dos leiloes terminados
                         existAuctions = getInactiveAuctions();
                         
                         if(existAuctions){
@@ -323,8 +353,10 @@ public class Client {
                             sendMsg = "{ \"Type\":"+messageType+ ",\"AuctionID\":"+auctionID+"}";                            
                             sendObj = new JSONObject(sendMsg);
                             
+                            //Informa repo sobre as informações que quer
                             rec = messageRepository(clientSocket,sendMsg);
 
+                            //Devolve resultado de um leilão e informações associadas
                             type = rec.getString(("Type"));
                             switch(type){
                                 case "AuctionOutcome":
@@ -347,7 +379,9 @@ public class Client {
                         }
                         break;
                         
+                    //Validar recibo 
                     case "8":
+                        
                         String receiptTextRead = "";
                         String fileNameToRead;
                         System.out.print("\nInsira o nome do ficheiro do recibo a validar: ");
@@ -390,6 +424,7 @@ public class Client {
                         
                         break;
                         
+                    //Licita num leilão
                     case "9":
                         messageType = "bid";
                         sendMsg = "{ \"Type\":"+messageType+"}";
@@ -412,7 +447,6 @@ public class Client {
                         if(result.equals(("SUCESS"))) bid = true;
                         
                         if(bid){
-                            //TODO: Com leilões criados e ativos, se se puser um ID que não existe, o programa continua para a frente, não devia.
                             existAuctions = getActiveAuctions();
 
                             if(existAuctions){
@@ -452,6 +486,7 @@ public class Client {
                                         }
                                         break;
                                     
+                                    //Produção de um recibo
                                     case "Receipt":
                                         String receiptText = "";
                                         String fileName;
@@ -507,7 +542,13 @@ public class Client {
         clientSocket.close();
         
     }
-    
+      
+    /**
+     * Imprime leilões feitos por um cliente
+     * 
+     * @param clientID ID Cliente
+     * @return true no caso de sucesso
+     */
     private static boolean getActiveAuctionsByClient(int clientID) throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lgaClient";
         sendMsg = "{ \"Type\":"+messageType+",\"ClientID\":" + clientID + "}";
@@ -535,6 +576,11 @@ public class Client {
         }
     }
     
+    /**
+     * Imprime leilões ativos
+     * 
+     * @return true no caso de sucesso
+     */
     private static boolean getActiveAuctions() throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lga";
         sendMsg = "{ \"Type\":"+messageType+"}";
@@ -562,6 +608,11 @@ public class Client {
         }
     }
     
+    /**
+     * Imprime leilões inativos
+     * 
+     * @param true no caso de sucesso
+     */
     private static boolean getInactiveAuctions() throws IOException, UnknownHostException, GeneralSecurityException{
         messageType = "lta";
         sendMsg = "{ \"Type\":"+messageType+"}";
@@ -594,8 +645,6 @@ public class Client {
      * 
      * @param clientSocket Socket do Cliente
      * @param msg Mensagem a enviar ao manager
-     * @throws UnknownHostException
-     * @throws IOException
      */
     private static JSONObject messageManager(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException, GeneralSecurityException{
         sendObj = new JSONObject(msg);
@@ -653,8 +702,6 @@ public class Client {
      * 
      * @param clientSocket Socket do Cliente
      * @param msg Mensagem a enviar ao manager
-     * @throws UnknownHostException
-     * @throws IOException
      */
     private static JSONObject messageRepository(DatagramSocket clientSocket, String msg) throws UnknownHostException, IOException, GeneralSecurityException{
         sendObj = new JSONObject(msg);
@@ -702,16 +749,15 @@ public class Client {
     }
     
     /**
-     * Função que inicia a comunicação.Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
+     * Função que inicia a comunicação.
+     * Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
      * 
      * @param clientSocket Socket do Cliente
      * @param managerKey Chave publica do manager
-     * @throws UnknownHostException
-     * @throws java.security.cert.CertificateException
-     * @throws java.security.KeyStoreException
-     * @throws IOException
      */
     private static void initCommunicationManager(DatagramSocket clientSocket, PublicKey managerKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
+        
+        //Manda mensagem em plaintext para o manager a informar que quer iniciar a comunicação
         String sendMsg = "{ \"Type\":init}";
         JSONObject sendObj = new JSONObject(sendMsg);
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
@@ -721,7 +767,7 @@ public class Client {
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
-        //Manager 
+        //Manager responde com o certificado do servidor 
         byte[] receivebuffer = new byte[30000];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
@@ -731,6 +777,7 @@ public class Client {
         X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
         managerCert = certificate;
         
+        //Valida certificado, guarda-lo e envia certificado do cliente
         try{
             certificate.checkValidity();
             managerKey = certificate.getPublicKey();
@@ -739,6 +786,7 @@ public class Client {
             System.out.println("Certificate not valid ");
         }
         
+        //Recebe informação de validação do certificado do cliente por parte do repo
         clientSocket.receive(receivePacket);
         String ReceivedMsg = new String(receivePacket.getData());
         JSONObject recMsg = new JSONObject(ReceivedMsg);
@@ -752,12 +800,8 @@ public class Client {
         }
         
         //Ver algoritmos a usar
-        //Gerar chave simétrica
         if(simetricKeyGen){
             try {
-                /*KeyGenerator kgen = KeyGenerator.getInstance("AES");
-                kgen.init(128, new SecureRandom());
-                secretKeyManager = kgen.generateKey();*/
                 secretKeyManager= KeyGenerator.getInstance("AES").generateKey();
    
                 //Assinar chave
@@ -777,24 +821,25 @@ public class Client {
                 System.out.println("Impossible to generate Symetric Key.");
             }
         }
+        
+        //Envia chave simetrica encritpada com a chave privada do cliente para o qual o repo tem a chave publica
         sendbuffer = sendObj.toString().getBytes();
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
     }
     
-        /**
-     * Função que inicia a comunicação.Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
+     /**
+     * Função que inicia a comunicação.
+     * Começa por mandar uma mensagem a dizer init, de seguida espera a mensagem do servidor com o certificado, valida o certificado do servidor, manda o seu certificado e fica á espera da confirmação de validação por parte do servidor, quando recebida, ativa a possibildiade de geração de chave simetrica.
      * 
      * @param clientSocket Socket do Cliente
      * @param repositoryKey Chave publica do repositorio
-     * @throws UnknownHostException
-     * @throws java.security.cert.CertificateException
-     * @throws java.security.KeyStoreException
-     * @throws IOException
      */
     private static void initCommunicationRepository(DatagramSocket clientSocket, PublicKey repositoryKey) throws IOException, CertificateException, KeyStoreException, GeneralSecurityException{
+       
+        //Manda mensagem em plaintext para o repositorio a informar que quer iniciar a comunicação
         String sendMsg = "{ \"Type\":init}";
-        JSONObject sendObj = new JSONObject(sendMsg);
+        JSONObject sendObj = new JSONObject(sendMsg);  
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
         int ServerPort = 9876;
         byte[] sendbuffer;
@@ -802,7 +847,7 @@ public class Client {
         DatagramPacket sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);
         
-        //Repositorio
+        //Repositorio responde com o certificado do servidor
         byte[] receivebuffer = new byte[30000];
         DatagramPacket receivePacket = new DatagramPacket(receivebuffer, receivebuffer.length);
         clientSocket.receive(receivePacket);
@@ -812,6 +857,7 @@ public class Client {
         X509Certificate certificate = (X509Certificate)(certificateFactory.generateCertificate( new ByteArrayInputStream(certificateBytes)));
         repositoryCert = certificate;
         
+        //Valida certificado, guarda-lo e envia certificado do cliente
         try{
             certificate.checkValidity();
             repositoryKey = certificate.getPublicKey();
@@ -820,6 +866,7 @@ public class Client {
             System.out.println("Certificate not valid ");
         }
         
+        //Recebe informação de validação do certificado do cliente por parte do repo
         clientSocket.receive(receivePacket);
         String ReceivedMsg = new String(receivePacket.getData());
         JSONObject recMsg = new JSONObject(ReceivedMsg);
@@ -832,8 +879,7 @@ public class Client {
            }
         }
         
-        //Ver algoritmos a usar
-        //Gerar chave simétrica
+        //Gera chave simétrica
         if(simetricKeyGen){
             try {
                 secretKeyRepository = KeyGenerator.getInstance("AES").generateKey();
@@ -855,6 +901,8 @@ public class Client {
                 System.out.println("Impossible to generate Symetric Key.");
             }
         }
+        
+        //Envia chave simetrica encritpada com a chave privada do cliente para o qual o repo tem a chave publica
         sendbuffer = sendObj.toString().getBytes();        
         sendPacket = new DatagramPacket(sendbuffer, sendbuffer.length,ServerIP ,ServerPort);
         clientSocket.send(sendPacket);        
@@ -866,9 +914,6 @@ public class Client {
      * 
      * @param clientSocket Socket do Cliente
      * @param cert Certificado do CC
-     * @throws java.net.UnknownHostException
-     * @throws IOException
-     * @throws java.security.cert.CertificateEncodingException
      */
     private static void messageManagerCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
@@ -885,9 +930,6 @@ public class Client {
      * 
      * @param clientSocket Socket do Cliente
      * @param cert Certificado do CC
-     * @throws java.net.UnknownHostException
-     * @throws IOException
-     * @throws java.security.cert.CertificateEncodingException
      */
     private static void messageRepositoryCert(DatagramSocket clientSocket, X509Certificate cert) throws UnknownHostException, IOException, CertificateEncodingException{
         InetAddress ServerIP = InetAddress.getByName("127.0.0.1");
@@ -899,7 +941,14 @@ public class Client {
         clientSocket.send(sendPacket);
     }
     
-    
+    /**
+     * Convert um inteiro num byte array
+     * 
+     * @param i Inteiro
+     * @return conversão para byte array
+     * 
+     * Adaptado de stackoverflow
+     */
     private static byte[] intToByteArray ( final int i ) throws IOException {      
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         DataOutputStream dos = new DataOutputStream(bos);
@@ -908,6 +957,14 @@ public class Client {
         return bos.toByteArray();
     }
 
+    /**
+     * Convert um byte array em um inteiro
+     * 
+     * @param i Byte array
+     * @return conversão para inteiro
+     * 
+     * Adaptado de stackoverflow
+     */
     private int convertByteArrayToInt(byte[] intBytes){
         ByteBuffer byteBuffer = ByteBuffer.wrap(intBytes);
         return byteBuffer.getInt();

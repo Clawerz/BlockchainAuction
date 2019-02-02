@@ -42,6 +42,7 @@ public class Auction {
     }
 
     /**
+     * Devolve nome do leilão
      * 
      * @return  Retorna nome do leilão
      */
@@ -50,6 +51,7 @@ public class Auction {
     }
 
     /**
+     * Devolve ID do criador do leilão
      * 
      * @return Retorna ID do criador
      */
@@ -58,6 +60,7 @@ public class Auction {
     }
 
     /**
+     * Devolve ID de um leilão
      * 
      * @return Retorna ID do leilão
      */
@@ -66,6 +69,7 @@ public class Auction {
     }
 
     /**
+     * Devolve tempo até ao final
      * 
      * @return Retorna tempo até fim do leilão
      */
@@ -74,6 +78,7 @@ public class Auction {
     }
 
     /**
+     * Devolve tipo de um leilão
      * 
      * @return Retorna se é leilão inglês ou leilão cego
      */
@@ -82,6 +87,7 @@ public class Auction {
     }
     
     /**
+     * Devolve estado de um leilão
      * 
      * @return Retorna true caso o leilão já tenha acabado, false se não
      */
@@ -90,6 +96,7 @@ public class Auction {
     }
 
     /**
+     * Devolve ID do vencedor
      * 
      * @return Retorna ID do comprador
      */
@@ -98,6 +105,7 @@ public class Auction {
     }
 
     /**
+     * Devolve lista de bids
      * 
      * @return Retorna lista de bids feitos
      */
@@ -106,6 +114,7 @@ public class Auction {
     }
 
     /**
+     * Devolve bid vencedora
      * 
      * @return Retorna bid vencedor
      */
@@ -114,6 +123,7 @@ public class Auction {
     }
 
     /**
+     * Define o término de um leilão
      * 
      * @param auctionFinished True caso já tenha acabado, false se não
      */
@@ -122,6 +132,7 @@ public class Auction {
     }
 
     /**
+     * Define o vencedor de um leilão
      * 
      * @param buyerID ID do comprador
      */
@@ -130,6 +141,7 @@ public class Auction {
     }
 
     /**
+     * Define o nome de um leilão
      * 
      * @param auctionName Nome do leilão
      */
@@ -138,6 +150,7 @@ public class Auction {
     }
 
     /**
+     * Define o criador de um leilão
      * 
      * @param creatorID ID do criador
      */
@@ -146,6 +159,7 @@ public class Auction {
     }
 
     /**
+     * Define ID de um leilão
      * 
      * @param auctionID ID do leilão
      */
@@ -154,6 +168,7 @@ public class Auction {
     }
 
     /**
+     * Devolve tempo até ao final
      * 
      * @param timeToFinish Tempo até ao fim
      */
@@ -162,6 +177,7 @@ public class Auction {
     }
 
     /**
+     * Define bid vencedora
      * 
      * @param winnerBid Bid vencedor
      */
@@ -170,6 +186,7 @@ public class Auction {
     }
 
     /**
+     * Devolve todas as bids
      * 
      * @param bids Lista de bids
      */
@@ -178,33 +195,45 @@ public class Auction {
     }
     
     /**
+     * Adiciona uma bid
      * 
-     * @param bids Lista de bids
+     * @param e Bid a ser aidcionada
      */
     public void addBid(Bid e) {
         this.bids.add(e);
     }
     
     /**
+     * Adiciona uma bid á lista de bids assinadas e encritpadas
      * 
-     * @param bids Lista de bids
+     * @param bid bid a ser adicionada
      */
     public void addBidSignedEncrypted(byte[] bid) {
         this.bids_signed_encrypted.add(bid);
     }
 
-    
+    /**
+     * Devolve lista de bids assinadas e encritpadas
+     * 
+     * @return Lista de bids assinadas e encritpadas
+     */
     public ArrayList<byte[]> getBids_signed_encrypted() {
         return bids_signed_encrypted;
     }
 
+    /**
+     * Devolve blockchain
+     * 
+     * @return Blockchain 
+     */
     public LinkedList<byte[]> getBlockChain() {
         return this.blockChain;
     }
     
     /**
+     * Adiciona uma bid á chain
      * 
-     * @param bids Lista de bids
+     * @param hash hash a ser adicionada
      */
     public void addChain(byte[] hash) {
         this.blockChain.add(hash);

@@ -141,13 +141,6 @@ is divided into following sections:
             <and>
                 <isset property="javac.profile"/>
                 <length length="0" string="${javac.profile}" when="greater"/>
-<<<<<<< HEAD
-                <not>
-                    <matches pattern="1\.[0-7](\..*)?" string="${javac.source}"/>
-                </not>
-=======
-                <matches pattern="((1\.[89])|9)(\..*)?" string="${javac.source}"/>
->>>>>>> 57fa88660962da41e727374be6cd48c5575bd4cb
             </and>
         </condition>
         <condition property="do.archive">
@@ -915,7 +908,6 @@ is divided into following sections:
             <attribute default="jvm" name="jvm"/>
             <element name="customize" optional="true"/>
             <sequential>
-<<<<<<< HEAD
                 <java classname="@{classname}" dir="${work.dir}" failonerror="${java.failonerror}" fork="true" module="@{modulename}">
                     <classpath>
                         <path path="@{classpath}"/>
@@ -927,12 +919,6 @@ is divided into following sections:
                     <upgrademodulepath>
                         <path path="@{upgrademodulepath}"/>
                     </upgrademodulepath>
-=======
-                <java classname="@{classname}" dir="${work.dir}" failonerror="${java.failonerror}" fork="true">
-                    <jvmarg line="${endorsed.classpath.cmd.line.arg}"/>
-                    <jvmarg line="${debug-args-line}"/>
-                    <jvmarg value="-Xrunjdwp:transport=${debug-transport},address=${jpda.address}"/>
->>>>>>> 57fa88660962da41e727374be6cd48c5575bd4cb
                     <jvmarg value="-Dfile.encoding=${runtime.encoding}"/>
                     <redirector errorencoding="${runtime.encoding}" inputencoding="${runtime.encoding}" outputencoding="${runtime.encoding}"/>
                     <jvmarg line="${run.jvmargs}"/>

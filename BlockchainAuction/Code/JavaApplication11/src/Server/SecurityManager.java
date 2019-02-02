@@ -29,6 +29,13 @@ import sun.security.x509.X500Name;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
+/**
+ *
+ * Security Manager Class
+ * <br>
+ * Classe com funções necessárias á segurança do manager
+ * 
+ */
 public class SecurityManager {
     
     /** 
@@ -119,13 +126,11 @@ public class SecurityManager {
     }
     
     /**
-     * Encripta uma mensagem, usando chaves assimetricas 
+     * Decripta uma mensagem, usando chaves assimetricas 
      * 
-     * @param input mensagem a ser encriptada
-     * @param key chave publica do servidor neste caso
-     * @return mensagem encriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
+     * @param input mensagem a ser decriptada
+     * @param key chave para a decriptação
+     * @return mensagem decriptada
      */
     static byte[] decryptMsg(Key key, byte[] input) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");
@@ -182,8 +187,6 @@ public class SecurityManager {
      * @param input mensagem a ser encriptada
      * @param keyServer chave publica do servidor neste caso
      * @return mensagem encriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
      */
     static byte[] encryptMsg(byte[] input, Key keyServer) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");

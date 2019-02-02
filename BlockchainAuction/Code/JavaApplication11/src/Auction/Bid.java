@@ -20,7 +20,6 @@ public class Bid {
     /**
      * Construtor básico de um bid
      * 
-     * @param date Data do bid 
      * @param value Valor do bid
      * @param clientID ID do cliente
      */
@@ -31,6 +30,7 @@ public class Bid {
     }
     
     /**
+     * Devolve data
      * 
      * @return Retorna a data do bid
      */
@@ -39,6 +39,7 @@ public class Bid {
     }
 
     /**
+     * Devolve valor
      * 
      * @return Retorna o valor do bid
      */
@@ -47,6 +48,7 @@ public class Bid {
     }
 
     /**
+     * Devolve ID do cliente
      * 
      * @return Retorna o ID do cliente que fez o bid
      */

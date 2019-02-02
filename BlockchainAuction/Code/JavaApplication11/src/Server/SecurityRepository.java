@@ -35,12 +35,18 @@ import sun.security.x509.X500Name;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
+/**
+ *
+ * Security Repository Class
+ * <br>
+ * Classe com funções necessárias á segurança do repositorio
+ * 
+ */
 public class SecurityRepository {
     
     /** 
     * Gera um par de chaves através de RSA
      * @return Par de chaves gerado
-     * @throws java.security.NoSuchAlgorithmException
      */ 
     static KeyPair generateKey() throws NoSuchAlgorithmException {
         //Usamos RSA
@@ -125,13 +131,11 @@ public class SecurityRepository {
     }
     
     /**
-     * Encripta uma mensagem, usando chaves assimetricas 
+     * Decripta uma mensagem, usando chaves assimetricas 
      * 
-     * @param input mensagem a ser encriptada
-     * @param key chave publica do servidor neste caso
-     * @return mensagem encriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
+     * @param input mensagem a ser decriptada
+     * @param key chave para a decriptação
+     * @return mensagem decriptada
      */
     static byte[] decryptMsg(Key key, byte[] input) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");
@@ -146,8 +150,6 @@ public class SecurityRepository {
      * @param input mensagem a ser encriptada
      * @param keyServer chave publica do servidor neste caso
      * @return mensagem encriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
      */
     static byte[] encryptMsg(byte[] input, Key keyServer) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("RSA");
@@ -175,8 +177,6 @@ public class SecurityRepository {
      * @param keySym chave simetricas
      * @param initializationVector array para vertor de inicialização
      * @return mensagem encriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
      */
     static byte[] encryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
@@ -193,8 +193,6 @@ public class SecurityRepository {
      * @param keySym chave simetricas
      * @param initializationVector vetor de inicialização
      * @return mensagem decriptada
-     * @throws java.io.IOException
-     * @throws java.security.GeneralSecurityException
      */
     static byte[] decryptMsgSym(byte[] input, Key keySym, byte[] initializationVector) throws IOException, GeneralSecurityException {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");       
@@ -209,13 +207,9 @@ public class SecurityRepository {
     /**
      * Verifica assinatura
      * 
-     * @param ks Keystore com as chaves para assinar
-     * @throws java.security.NoSuchAlgorithmException
-     * @throws java.security.InvalidKeyException
-     * @throws java.security.SignatureException
-     * @throws java.security.KeyStoreException
-     * @throws java.security.UnrecoverableKeyException
-
+     * @param sign Keystore com as chaves para assinar
+     * @param input Dados da assinatura
+     * @param cert Certificado
      */
     static boolean verifySign(byte[] sign, byte[] input, Certificate cert) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
         //Verificar assinatura
@@ -228,12 +222,25 @@ public class SecurityRepository {
         return false;
     }
     
+    /**
+     * Faz a hash de dados com o recurso a SHA-256
+     * 
+     * @param data dados
+     * @return hash dos dados
+    */
     static byte[] hash(byte[] data) throws NoSuchAlgorithmException{
         MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
         byte[] digest = messageDigest.digest(data);       
         return digest;
     }
     
+    /**
+     * Verifica a hash de dados com o recurso a SHA-256
+     * 
+     * @param data dados
+     * @param hash hash a ser verificada
+     * @return true para o caso de ser verificada
+    */
     static boolean verifyHash(byte[] data, byte[] hash) throws NoSuchAlgorithmException{
         //Assinar chave
         MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -242,6 +249,13 @@ public class SecurityRepository {
         return false;
     }
     
+    /**
+     * Assina um conjunto de dados
+     * 
+     * @param dataBuffer dados a assinar
+     * @param kp Par de chaves
+     * @return dados assinados
+    */
     static byte[] sign(byte[] dataBuffer, KeyPair kp) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
         //Fazer assinatura de um objecto
         Signature s = Signature.getInstance("SHA256withRSA");
