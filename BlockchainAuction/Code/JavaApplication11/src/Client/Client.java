@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -347,7 +348,30 @@ public class Client {
                         break;
                         
                     case "8":
-                        //TODO: Não faz nada por agora, pois ainda não sabemos como validar recibos
+                        String receiptTextRead = "";
+                        String fileNameToRead;
+                        System.out.print("\nInsira o nome do ficheiro do recibo a validar: ");
+                        fileNameToRead = br.readLine();
+                        try {
+                            File textFileRead = new File(fileNameToRead + ".txt");
+
+                            FileReader fr = new FileReader(textFileRead);
+                            BufferedReader buffReader = new BufferedReader(fr);
+                            String line;
+                            while((line = buffReader.readLine()) != null){
+                                receiptTextRead += line + "\n";
+                            }
+                            buffReader.close();
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        
+                        String[] receiptParts = receiptTextRead.split("\n");
+                        for(int i=0; i<receiptParts.length; i++){
+                            System.out.println(receiptParts[i]);
+                        }
+                        
                         messageType = "vlr";
                         sendMsg = "{ \"Type\":"+messageType+"}";
 
