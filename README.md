@@ -1,37 +1,22 @@
-# BlockChain Auction
+# Sistema de leilões
 
-Security project from UA 2018
+Projecto segurança 2019
+# Correr
 
-# Run
+	1. Correr AuctionManager.java
+	2. Correr AuctionRepository.java
+	3. Correr Client.java
 
-	* **AuctionManager.java**
-	* **AuctionRepository.java**
-	* **Client.java**
+# Javadoc
 
-# Send message from Client 
-Consider the following list, put a "-" between message parameteres for example cta-param[1]-param[2]-param[3]-param[4]
-Please see Javadocs for messages syntax
+Para aceder ao javadoc, aceder á pasta JavaApplication11\dist\javadoc
 
-		*cta - Create Auction
-        *tta - End Auction
-        *gba - Bids done for a auction
-        *gbc - Bids done by a client
-        *lga - List all inactive auctions
-        *lta - List all inactive auctions
-        *coa - Auction result
-        *vlr - Receipt Validation
-        *rct - Aswner to create auction
-        *rtt - Aswner end auction
-        *rgb - Aswner to bids done for a auction
-        *rgc - Aswner to bids done by a client
-        *rlg - Aswner to list all active auctions
-        *rlt - Aswner to list all inactive auctions
-        *rco - Aswner to auction result
-        *rvl - Aswner to receipt validation
-        *end - End All
+# Repositório git usado
+
+https://github.com/Clawerz/BlockchainAuction
 
 
-## Authors
+## Autores
 
 * **Filipe Reis**
 * **Carlos Ribeiro**
