@@ -373,24 +373,21 @@ public class Client {
                         String receiptClientId = receiptParts[2].replace("Id do Cliente: ", "");
                         
                         String receiptSignature = receiptParts[4].replace("Assinatura digital: ", "");
-                        byte[] Sign = receiptSignature.getBytes();
+                        
+                        String[] Signature = receiptSignature.substring(1, receiptSignature.length()-1).split(",");
+                        byte[] Sign = new byte[Signature.length];
+                        for(int i=0; i<Signature.length; i++){
+                            Sign[i] =  Byte.parseByte(Signature[i]);
+                        }
                         
                         String toVerify = ",\"AuctionID\":"+receiptAuctionId+",\"Amount\":"+receiptAmountId+",\"ClientID\":"+receiptClientId+"}";
                         
-                        messageType = "vlr";
-                        sendMsg = "{ \"Type\":"+messageType+"}";
-
-                        rec = messageRepository(clientSocket,sendMsg);
-
-                        type = rec.getString(("Type"));
-                        switch(type){
-                            case "ret":
-                                for(int i=1; i < rec.names().length();i++){
-                                    List tmp = rec.names().toList();
-                                    System.out.print("\nServer: " + rec.getString(tmp.get(i).toString()));
-                                }
-                            break;
+                        if(SecurityClient.verifySign(Sign,toVerify.getBytes(),repositoryCert)){
+                            System.out.println("Receipt has been validated.");
+                        }else{
+                            System.out.println("Receipt cannot be validated.");
                         }
+                        
                         break;
                         
                     case "9":
@@ -470,7 +467,7 @@ public class Client {
                                         receiptText += "\nQuantia: " + receiptAmount;
                                         receiptText += "\nId do Cliente: " + receiptClientID;
                                         receiptText += "\n\nAssinatura digital: " + signature;
-                                        
+
                                         try {
                                             File newTextFile = new File(fileName + ".txt");
 

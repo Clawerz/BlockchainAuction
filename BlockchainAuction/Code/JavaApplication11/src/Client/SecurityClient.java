@@ -226,4 +226,15 @@ public class SecurityClient {
         return output;
 
     }
+    
+    static boolean verifySign(byte[] sign, byte[] input, Certificate cert) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException, KeyStoreException, UnrecoverableKeyException{
+        //Verificar assinatura
+        Signature s2 = Signature.getInstance("SHA256withRSA");
+        s2.initVerify(cert);
+        s2.update(input);
+        if(s2.verify(sign)){
+            return true;
+        }
+        return false;
+    }
 }
