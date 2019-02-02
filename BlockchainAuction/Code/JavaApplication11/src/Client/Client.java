@@ -368,9 +368,14 @@ public class Client {
                         }
                         
                         String[] receiptParts = receiptTextRead.split("\n");
-                        for(int i=0; i<receiptParts.length; i++){
-                            System.out.println(receiptParts[i]);
-                        }
+                        String receiptAuctionId = receiptParts[0].replace("Id do Leilão: ", "");
+                        String receiptAmountId = receiptParts[1].replace("Quantia: ", "");
+                        String receiptClientId = receiptParts[2].replace("Id do Cliente: ", "");
+                        
+                        String receiptSignature = receiptParts[4].replace("Assinatura digital: ", "");
+                        byte[] Sign = receiptSignature.getBytes();
+                        
+                        String toVerify = ",\"AuctionID\":"+receiptAuctionId+",\"Amount\":"+receiptAmountId+",\"ClientID\":"+receiptClientId+"}";
                         
                         messageType = "vlr";
                         sendMsg = "{ \"Type\":"+messageType+"}";
